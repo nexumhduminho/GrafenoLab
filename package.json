@@ -1,6 +1,7 @@
 {
   "name": "react",
   "version": "1.0.0",
+  "homepage": "https://nexumhduminho.github.io/GrafenoLab",
   "description": "",
   "keywords": [],
   "main": "src/index.tsx",
