@@ -1,2 +1,3 @@
 # GrafenoLab
-Created with CodeSandbox
+
+Plataforma educativa sobre grafeno no âmbito das humanidades digitais.
