@@ -1,21 +1,25 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import Navbar from "./components/Navbar";
 import Hero from "./components/Hero";
 import Section from "./components/Section";
+import MediaCard from "./components/MediaCard";
 import AudioCard from "./components/AudioCard";
+import QuizCard from "./components/QuizCard";
 import CollapsibleBlock from "./components/CollapsibleBlock.jsx";
 import Footer from "./components/Footer";
 
-import imagemImg from "./assets/imagem.jpg";
 import grafenoImg from "./assets/grafeno.jpg";
 import carbonoImg from "./assets/carbono-formas.jpg";
-import hexagonosImg from "./assets/hexagonos.jpeg";
 import descobertaImg from "./assets/descoberta.jpg";
 import descobertaMuseuImg from "./assets/descoberta-museu.jpg";
 import nobelImg from "./assets/geim-novoselov.jpg";
 import aplicacoesImg from "./assets/aplicacoes.jpg";
+import { BarChart3, Brain } from "lucide-react";
 
 export default function App() {
+  const [showQuiz, setShowQuiz] = useState(false);
+  const quizRef = useRef(null);
+
   return (
     <div className="app">
       <Navbar />
@@ -211,28 +215,30 @@ O grafeno é, precisamente, uma dessas camadas individuais da grafite. Enquanto 
     src="/grafeno-oquee.mp3"
   />
 
-  <div className="audio-card">
-    <p className="audio-card__eyebrow">Explorar infográfico</p>
-    <h3 className="audio-card__title">Formas do carbono</h3>
-    <p className="audio-card__text">
-      Veja de forma visual como o grafeno se relaciona com outras formas do carbono.
-    </p>
-    <button className="video-card__button" type="button">
-      Ver infográfico
-    </button>
-  </div>
+<MediaCard
+  icon={<BarChart3 size={20} strokeWidth={1.8} />}
+  eyebrow="Explorar infográfico"
+  title="Formas do carbono"
+  description="Veja de forma visual como o grafeno se relaciona com outras formas do carbono."
+  buttonText="Ver infográfico"
+/>
 
-  <div className="audio-card">
-    <p className="audio-card__eyebrow">Testar conhecimentos</p>
-    <h3 className="audio-card__title">Quiz rápido</h3>
-    <p className="audio-card__text">
-      Consolide o que aprendeu com 5 perguntas de resposta rápida.
-    </p>
-    <button className="video-card__button" type="button">
-      Começar quiz
-    </button>
-  </div>
+<MediaCard
+  icon={<Brain size={20} strokeWidth={1.8} />}
+  eyebrow="Testar conhecimentos"
+  title="Quiz rápido"
+  description="Consolide o que aprendeu com 5 perguntas de resposta rápida."
+  buttonText="Começar quiz"
+  onButtonClick={() => setShowQuiz(true)}
+/>
 </div>
+
+{showQuiz && (
+  <div ref={quizRef} className="quiz-wrapper">
+    <QuizCard />
+  </div>
+)}
+
 </Section>
 
         <Section
