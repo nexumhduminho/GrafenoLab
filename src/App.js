@@ -1,8 +1,9 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Navbar from "./components/Navbar";
 import Hero from "./components/Hero";
 import Section from "./components/Section";
 import MediaCard from "./components/MediaCard";
+import { BarChart3, Brain, Headphones } from "lucide-react";
 import AudioCard from "./components/AudioCard";
 import QuizCard from "./components/QuizCard";
 import CollapsibleBlock from "./components/CollapsibleBlock.jsx";
@@ -14,11 +15,18 @@ import descobertaImg from "./assets/descoberta.jpg";
 import descobertaMuseuImg from "./assets/descoberta-museu.jpg";
 import nobelImg from "./assets/geim-novoselov.jpg";
 import aplicacoesImg from "./assets/aplicacoes.jpg";
-import { BarChart3, Brain } from "lucide-react";
 
 export default function App() {
   const [showQuiz, setShowQuiz] = useState(false);
   const quizRef = useRef(null);
+  useEffect(() => {
+  if (showQuiz && quizRef.current) {
+    quizRef.current.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }
+}, [showQuiz]);
 
   return (
     <div className="app">
@@ -209,6 +217,7 @@ O grafeno é, precisamente, uma dessas camadas individuais da grafite. Enquanto 
 
 <div className="multimedia-grid">
   <AudioCard
+    icon={<Headphones size={20} strokeWidth={1.8} />}
     duration="3 minutos"
     title="O que é o grafeno?"
     description="Uma introdução sobre o que é o grafeno, sua descoberta e o seu potencial."
@@ -216,6 +225,7 @@ O grafeno é, precisamente, uma dessas camadas individuais da grafite. Enquanto 
   />
 
 <MediaCard
+  variant="infografico"
   icon={<BarChart3 size={20} strokeWidth={1.8} />}
   eyebrow="Explorar infográfico"
   title="Formas do carbono"
@@ -224,6 +234,7 @@ O grafeno é, precisamente, uma dessas camadas individuais da grafite. Enquanto 
 />
 
 <MediaCard
+  variant="quiz"
   icon={<Brain size={20} strokeWidth={1.8} />}
   eyebrow="Testar conhecimentos"
   title="Quiz rápido"

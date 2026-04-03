@@ -7,11 +7,12 @@ export default function MediaCard({
   description,
   buttonText,
   onButtonClick,
+  variant
 }) {
   return (
     <div className="audio-card">
       <div className="audio-card__top">
-        <div className="audio-card__icon">
+        <div className={`audio-card__icon ${variant}`}>
           <span className="audio-card__icon-svg">{icon}</span>
         </div>
         <p className="audio-card__eyebrow">{eyebrow}</p>

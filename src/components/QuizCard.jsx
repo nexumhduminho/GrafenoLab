@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { Brain } from "lucide-react";
 
 const defaultQuestions = [
   {
@@ -138,16 +139,25 @@ export default function QuizCard({ questions = defaultQuestions }) {
   return (
     <section className="quiz-card">
       {!started && !finished && (
-        <div className="quiz-card__intro">
-          <p className="quiz-card__eyebrow">Quiz rápido</p>
-          <h3 className="quiz-card__title">Testa o que aprendeste</h3>
-          <p className="quiz-card__text">
-            Responde a 5 perguntas curtas sobre o capítulo “O que é o grafeno?”.
-          </p>
-          <button className="quiz-card__button" onClick={handleStart}>
-            Começar quiz
-          </button>
+      <div className="quiz-card__intro">
+        <div className="quiz-card__header">
+          <div className="audio-card__icon quiz">
+            <Brain size={20} strokeWidth={1.8} />
+          </div>
+
+          <h3 className="quiz-card__title">
+            Testa o que aprendeste
+          </h3>
         </div>
+
+        <p className="quiz-card__text">
+          Responde a 5 perguntas rápidas sobre o capítulo “O que é o grafeno?”.
+        </p>
+
+        <button className="quiz-card__button" onClick={handleStart}>
+          Começar quiz
+        </button>
+      </div>
       )}
 
       {started && !finished && (
@@ -223,17 +233,23 @@ export default function QuizCard({ questions = defaultQuestions }) {
 
       {finished && (
         <div className="quiz-card__result">
-          <p className="quiz-card__eyebrow">Resultado final</p>
           <h3 className="quiz-card__title">
-            Acertaste {score} em {totalQuestions}
+            {score === totalQuestions
+              ? `Perfeito! ${score} em ${totalQuestions}`
+              : `Acertaste ${score} em ${totalQuestions}`}
           </h3>
           <p className="quiz-card__text">
             {score === totalQuestions &&
-              "Excelente! Já dominas muito bem os conceitos essenciais deste capítulo."}
+              "Excelente! Dominas muito bem os conceitos fundamentais do grafeno."}
+
             {score >= 3 && score < totalQuestions &&
-              "Muito bem! Já tens uma boa compreensão do que é o grafeno."}
-            {score < 3 &&
-              "Bom começo. Vale a pena rever esta secção e tentar novamente."}
+              "Muito bem! Já tens uma boa compreensão dos principais conceitos."}
+
+            {score === 2 &&
+              "Razoável, mas ainda com algumas lacunas. Vale a pena rever os pontos principais."}
+
+            {score <= 1 &&
+              "Ainda não consolidaste os conceitos essenciais. Revê os conteúdos esta secção e tenta novamente."}
           </p>
 
           <div className="quiz-card__result-actions">
