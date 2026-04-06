@@ -7,7 +7,8 @@ export default function MediaCard({
   description,
   buttonText,
   onButtonClick,
-  variant
+  variant,
+  audioSrc
 }) {
   return (
     <div className="audio-card">
@@ -22,9 +23,19 @@ export default function MediaCard({
 
       <p className="audio-card__text">{description}</p>
 
-      <button className="card-button" type="button" onClick={onButtonClick}>
-        {buttonText}
-      </button>
+      {/* SE FOR ÁUDIO */}
+      {variant === "audio" && audioSrc && (
+        <audio controls className="audio-card__player">
+          <source src={audioSrc} type="audio/mpeg" />
+        </audio>
+      )}
+
+      {/* OUTROS CASOS */}
+      {variant !== "audio" && (
+        <button className="card-button" type="button" onClick={onButtonClick}>
+          {buttonText}
+        </button>
+      )}
     </div>
   );
 }

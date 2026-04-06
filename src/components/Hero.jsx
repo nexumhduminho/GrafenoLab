@@ -20,7 +20,7 @@ export default function Hero() {
 
         <div className="hero__buttons">
           <a href="#oque" className="hero__button">
-            Explorar
+            Explorar o tema
           </a>
 
           <a href="#lab" className="hero__button hero__button--secondary">

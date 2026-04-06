@@ -19,14 +19,28 @@ import aplicacoesImg from "./assets/aplicacoes.jpg";
 export default function App() {
   const [showQuiz, setShowQuiz] = useState(false);
   const quizRef = useRef(null);
+
+  const [showInfografico, setShowInfografico] = useState(false);
+  const infograficoRef = useRef(null);
+
+  const mediaRef = useRef(null);
+  
   useEffect(() => {
-  if (showQuiz && quizRef.current) {
-    quizRef.current.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
-    });
-  }
-}, [showQuiz]);
+
+    if (showQuiz && quizRef.current) {
+      quizRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
+
+    if (showInfografico && infograficoRef.current) {
+      infograficoRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
+  }, [showQuiz, showInfografico]);
 
   return (
     <div className="app">
@@ -215,22 +229,25 @@ O grafeno é, precisamente, uma dessas camadas individuais da grafite. Enquanto 
   </CollapsibleBlock>
 </div>
 
-<div className="multimedia-grid">
-  <AudioCard
-    icon={<Headphones size={20} strokeWidth={1.8} />}
-    duration="3 minutos"
-    title="O que é o grafeno?"
-    description="Uma introdução sobre o que é o grafeno, sua descoberta e o seu potencial."
-    src="/grafeno-oquee.mp3"
-  />
+<div ref={mediaRef} className="multimedia-grid">
 
 <MediaCard
+  variant="audio"
+  icon={<Headphones size={20} strokeWidth={1.8} />}
+  eyebrow="Ouvir resumo"
+  title="Podcast"
+  description="Uma conversa informal para explorar o que é o grafeno, a sua descoberta e o seu potencial."
+  audioSrc="/grafeno-oquee.mp3"
+/>
+
+  <MediaCard
   variant="infografico"
   icon={<BarChart3 size={20} strokeWidth={1.8} />}
-  eyebrow="Explorar infográfico"
-  title="Formas do carbono"
-  description="Veja de forma visual como o grafeno se relaciona com outras formas do carbono."
+  eyebrow="Síntese visual"
+  title="Infográfico"
+  description="Resumo sobre a descoberta, propriedades e importância científica do grafeno."
   buttonText="Ver infográfico"
+  onButtonClick={() => setShowInfografico(true)}
 />
 
 <MediaCard
@@ -242,11 +259,52 @@ O grafeno é, precisamente, uma dessas camadas individuais da grafite. Enquanto 
   buttonText="Começar quiz"
   onButtonClick={() => setShowQuiz(true)}
 />
+
 </div>
 
 {showQuiz && (
   <div ref={quizRef} className="quiz-wrapper">
     <QuizCard />
+  </div>
+)}
+
+{showInfografico && (
+  <div ref={infograficoRef} className="infografico-wrapper">
+    <div className="infografico-card">
+      <h3 className="infografico-title">Infográfico do capítulo</h3>
+
+      <img
+        src="/infografico_grafeno1.jpg"
+        alt="Infográfico de síntese sobre o capítulo O que é o grafeno?"
+        className="infografico-image"
+      />
+
+      <div className="infografico-actions">
+        <a
+          href="/infografico_grafeno1.pdf"
+          download
+          className="card-button"
+        >
+          Descarregar [PDF]
+        </a>
+
+        <button
+          className="card-button secondary"
+          onClick={() => {
+            setShowInfografico(false);
+            setTimeout(() => {
+              mediaRef.current?.scrollIntoView({
+                behavior: "smooth",
+                block: "start",
+              });
+            }, 100);
+          }}
+        >
+          Fechar
+        </button>
+
+      </div>
+    </div>
   </div>
 )}
 
@@ -276,12 +334,12 @@ O grafeno é, precisamente, uma dessas camadas individuais da grafite. Enquanto 
 
         <Section
           id="futuro"
-          title="O futuro do grafeno"
-          subtitle="Investigação, inovação e desafios para transformar potencial em impacto."
+          title="Formação e Profissões"
+          subtitle="Formação, investigação e oportunidades em expansão."
         >
           <p>
-            A investigação continua a explorar novas formas de produzir e
-            aplicar este material revolucionário.
+            A investigação científica continua a aprofundar métodos de produção e aplicação do 
+            grafeno, criando novas oportunidades de formação e desenvolvimento profissional.
           </p>
         </Section>
       </main>

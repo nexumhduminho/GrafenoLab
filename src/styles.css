@@ -204,7 +204,7 @@ img {
 .section-subtitle {
   font-size: clamp(1.1rem, 2.2vw, 1.6rem);
   line-height: 1.7;
-  color: #94a3b8;
+  color: #9ccde2;
   max-width: 760px;
   margin: 1rem auto 0;
 }
@@ -593,6 +593,38 @@ img {
     flex-direction: column;
     align-items: stretch;
   }
+}
+
+.infografico-wrapper {
+  margin-top: 3rem;
+  scroll-margin-top: 5rem;
+}
+
+.infografico-card {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 1.8rem;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.infografico-title {
+  margin-bottom: 1.2rem;
+  color: #38bdf8;
+}
+
+.infografico-image {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto 1.5rem;
+  border-radius: 16px;
+}
+
+.infografico-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
 }
 
 /* COLLAPSIBLE BLOCK */
