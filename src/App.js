@@ -3,31 +3,36 @@ import Navbar from "./components/Navbar";
 import Hero from "./components/Hero";
 import Section from "./components/Section";
 import MediaCard from "./components/MediaCard";
-import { BarChart3, Brain, Headphones } from "lucide-react";
 import AudioCard from "./components/AudioCard";
 import QuizCard from "./components/QuizCard";
 import CollapsibleBlock from "./components/CollapsibleBlock.jsx";
+import IndustriaGrid from "./components/IndustriaGrid";
 import Footer from "./components/Footer";
 
-import grafenoImg from "./assets/grafeno.jpg";
-import carbonoImg from "./assets/carbono-formas.jpg";
-import descobertaImg from "./assets/descoberta.jpg";
-import descobertaMuseuImg from "./assets/descoberta-museu.jpg";
-import nobelImg from "./assets/geim-novoselov.jpg";
-import aplicacoesImg from "./assets/aplicacoes.jpg";
+import { images } from "./data/images";
+import { BarChart3, Brain, Headphones } from "lucide-react";
+import { areaDetails } from "./data/areaDetails";
+import industriaCards from "./data/industriaData";
+
+import {
+  quizOQueEGrafeno,
+  quizPropriedades,
+  quizAplicacoes
+} from "./quizzes";
 
 export default function App() {
-  const [showQuiz, setShowQuiz] = useState(false);
-  const quizRef = useRef(null);
-
-  const [showInfografico, setShowInfografico] = useState(false);
-  const infograficoRef = useRef(null);
 
   const mediaRef = useRef(null);
+  const infograficoRef = useRef(null);
+  const quizRef = useRef(null);
+  const areaDetailRef = useRef(null);
+  
+  const [showInfografico, setShowInfografico] = useState(false);
+  const [activeQuiz, setActiveQuiz] = useState(null);
+  const [activeArea, setActiveArea] = useState("fisica");
   
   useEffect(() => {
-
-    if (showQuiz && quizRef.current) {
+    if (activeQuiz && quizRef.current) {
       quizRef.current.scrollIntoView({
         behavior: "smooth",
         block: "start",
@@ -40,7 +45,14 @@ export default function App() {
         block: "start",
       });
     }
-  }, [showQuiz, showInfografico]);
+
+    if (window.innerWidth > 768 && areaDetailRef.current) {
+      areaDetailRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+      });
+    }
+  }, [activeQuiz, showInfografico, activeArea]);
 
   return (
     <div className="app">
@@ -49,9 +61,9 @@ export default function App() {
 
       <main>
       <Section
-  id="oque"
-  title="O que é o grafeno?"
-  subtitle="Um material ultrafino com propriedades extraordinárias."
+        id="oque"
+        title="O que é o grafeno?"
+        subtitle="Um material ultrafino com propriedades extraordinárias."
 >
   <div className="grafeno-bloco">
     <div className="grafeno-bloco__texto">
@@ -78,7 +90,7 @@ export default function App() {
 
     <div className="grafeno-bloco__imagem">
       <img
-        src={grafenoImg}
+        src={images.grafeno}
         alt="Estrutura hexagonal do grafeno"
       />
     </div>
@@ -106,7 +118,8 @@ O grafeno é, precisamente, uma dessas camadas individuais da grafite. Enquanto 
 
       <div className="grafeno-bloco__imagem">
         <img
-          src={carbonoImg} alt="Estruturas do carbono"
+          src={images.carbono} 
+          alt="Estruturas do carbono"
         />
       </div>
     </div>
@@ -133,12 +146,12 @@ O grafeno é, precisamente, uma dessas camadas individuais da grafite. Enquanto 
 
       <div className="grafeno-bloco__imagem grafeno-bloco__imagem--descoberta">
         <img
-          src={descobertaImg}
+          src={images.descoberta}
           alt="A descoberta do grafeno - o método da fita de Scotch"
         />
 
         <img
-          src={descobertaMuseuImg}
+          src={images.descobertaMuseu}
           alt="Representação da descoberta do grafeno em contexto laboratorial"
         />
       </div>
@@ -161,7 +174,7 @@ O grafeno é, precisamente, uma dessas camadas individuais da grafite. Enquanto 
 
       <div className="grafeno-bloco__imagem grafeno-bloco__imagem--nobel">
         <img
-          src={nobelImg}
+          src={images.nobel}
           alt="Prémio Nobel de Física 2010 — Andre Geim e Konstantin Novoselov"
         />
       </div>
@@ -221,7 +234,7 @@ O grafeno é, precisamente, uma dessas camadas individuais da grafite. Enquanto 
 
       <div className="grafeno-bloco__imagem grafeno-bloco__imagem--aplicacoes">
         <img
-          src={aplicacoesImg}
+          src={images.aplicacoes}
           alt="Aplicações do grafeno em diferentes setores"
         />
       </div>
@@ -257,22 +270,21 @@ O grafeno é, precisamente, uma dessas camadas individuais da grafite. Enquanto 
   title="Quiz rápido"
   description="Consolide o que aprendeu com 5 perguntas de resposta rápida."
   buttonText="Começar quiz"
-  onButtonClick={() => setShowQuiz(true)}
+  onButtonClick={() => setActiveQuiz(quizOQueEGrafeno)}
 />
 
 </div>
 
-{showQuiz && (
-  <div ref={quizRef} className="quiz-wrapper">
-    <QuizCard />
-  </div>
-)}
+    {activeQuiz && (
+      <div ref={quizRef} className="quiz-wrapper">
+        <QuizCard questions={activeQuiz} />
+      </div>
+    )}
 
 {showInfografico && (
   <div ref={infograficoRef} className="infografico-wrapper">
     <div className="infografico-card">
-      <h3 className="infografico-title">Infográfico do capítulo</h3>
-
+    
       <img
         src="/infografico_grafeno1.jpg"
         alt="Infográfico de síntese sobre o capítulo O que é o grafeno?"
@@ -333,15 +345,252 @@ O grafeno é, precisamente, uma dessas camadas individuais da grafite. Enquanto 
         </Section>
 
         <Section
-          id="futuro"
+          id="formacao"
           title="Formação e Profissões"
           subtitle="Formação, investigação e oportunidades em expansão."
         >
           <p>
-            A investigação científica continua a aprofundar métodos de produção e aplicação do 
-            grafeno, criando novas oportunidades de formação e desenvolvimento profissional.
+            A investigação científica continua a aprofundar métodos de produção e aplicação do grafeno, 
+            abrindo caminho a novas áreas de formação e oportunidades profissionais. Longe de pertencer 
+            a uma única disciplina, o estudo do grafeno é um esforço coletivo que reúne físicos, químicos, 
+            engenheiros, biólogos e especialistas em informática, trabalhando de forma articulada.
           </p>
+          <p>
+            Esta interdisciplinaridade torna o grafeno um exemplo particularmente interessante de como 
+            a ciência funciona no mundo real. Para um aluno do ensino secundário, isso significa que 
+            existem múltiplas vias de entrada neste domínio — e que as disciplinas que hoje estuda podem, 
+            no futuro, estar ligadas a uma das mais promissoras áreas tecnológicas do século XXI.
+          </p>
+
+          <CollapsibleBlock title="Principais áreas de estudo">
+            <div className="areas-grid">
+
+              <div className="area-item">
+                <div
+                  className={`area-card ${activeArea === "fisica" ? "active" : ""}`}
+                  onClick={() => setActiveArea("fisica")}
+                >
+                  <span>⚛️</span>
+                  <h4>Física</h4>
+                  <p>Compreende as propriedades fundamentais do grafeno.</p>
+                </div>
+
+                {activeArea === "fisica" && (
+                  <div className="area-detail-mobile">
+                    <p>{areaDetails.fisica.text}</p>
+                    <p><strong>Cursos:</strong> {areaDetails.fisica.courses}</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="area-item">
+                <div
+                  className={`area-card ${activeArea === "quimica" ? "active" : ""}`}
+                  onClick={() => setActiveArea("quimica")}
+                >
+                  <span>🧪</span>
+                  <h4>Química</h4>
+                  <p>Produz e modifica o material para diferentes aplicações.</p>
+                </div>
+
+                {activeArea === "quimica" && (
+                  <div className="area-detail-mobile">
+                    <p>{areaDetails.quimica.text}</p>
+                    <p><strong>Cursos:</strong> {areaDetails.quimica.courses}</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="area-item">
+                <div
+                  className={`area-card ${activeArea === "engenharia" ? "active" : ""}`}
+                  onClick={() => setActiveArea("engenharia")}
+                >
+                  <span>⚙️</span>
+                  <h4>Engenharia</h4>
+                  <p>Transforma conhecimento em dispositivos e produtos reais.</p>
+                </div>
+
+                {activeArea === "engenharia" && (
+                  <div className="area-detail-mobile">
+                    <p>{areaDetails.engenharia.text}</p>
+                    <p><strong>Cursos:</strong> {areaDetails.engenharia.courses}</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="area-item">
+                <div
+                  className={`area-card ${activeArea === "saude" ? "active" : ""}`}
+                  onClick={() => setActiveArea("saude")}
+                >
+                  <span>🧬</span>
+                  <h4>Saúde e Biologia</h4>
+                  <p>Explora aplicações no corpo humano e na medicina.</p>
+                </div>
+
+                {activeArea === "saude" && (
+                  <div className="area-detail-mobile">
+                    <p>{areaDetails.saude.text}</p>
+                    <p><strong>Cursos:</strong> {areaDetails.saude.courses}</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="area-item">
+                <div
+                  className={`area-card ${activeArea === "computacao" ? "active" : ""}`}
+                  onClick={() => setActiveArea("computacao")}
+                >
+                  <span>💻</span>
+                  <h4>Computação</h4>
+                  <p>Simula materiais e usa IA para prever propriedades.</p>
+                </div>
+
+                {activeArea === "computacao" && (
+                  <div className="area-detail-mobile">
+                    <p>{areaDetails.computacao.text}</p>
+                    <p><strong>Cursos:</strong> {areaDetails.computacao.courses}</p>
+                  </div>
+                )}
+              </div>
+
+            </div>
+
+            <div
+              ref={areaDetailRef}
+              className="areas-detail areas-detail--desktop"
+            >
+              <h4>{areaDetails[activeArea].title}</h4>
+              <p>{areaDetails[activeArea].text}</p>
+              <p><strong>Cursos:</strong> {areaDetails[activeArea].courses}</p>
+            </div>
+
+          </CollapsibleBlock>
+
+          <CollapsibleBlock title="Saídas profissionais">
+            <p>
+              O grafeno pode abrir portas a profissões muito diferentes, desde a investigação académica à indústria, à saúde e à inteligência artificial.
+            </p>
+
+            <div className="saidas-grid">
+
+              <div className="saida-card">
+                <h4>Investigador em materiais</h4>
+                <p>
+                  Estuda propriedades do grafeno, desenvolve novos métodos de produção e explora aplicações emergentes.
+                </p>
+                <p><strong>Onde trabalha:</strong> universidades, laboratórios e centros de investigação.</p>
+              </div>
+
+              <div className="saida-card">
+                <h4>Engenheiro de processos</h4>
+                <p>
+                  Desenvolve e otimiza processos de fabrico e integração do grafeno em materiais e produtos.
+                </p>
+                <p><strong>Onde trabalha:</strong> indústria química, materiais e produção industrial.</p>
+              </div>
+
+              <div className="saida-card">
+                <h4>Engenheiro de produto</h4>
+                <p>
+                  Aplica grafeno em dispositivos, sensores, compósitos ou soluções energéticas.
+                </p>
+                <p><strong>Onde trabalha:</strong> empresas tecnológicas, energia, eletrónica e indústria automóvel.</p>
+              </div>
+
+              <div className="saida-card">
+                <h4>Investigador biomédico</h4>
+                <p>
+                  Explora aplicações do grafeno em diagnóstico, biossensores e biomateriais.
+                </p>
+                <p><strong>Onde trabalha:</strong> hospitais, centros de investigação biomédica e indústria farmacêutica.</p>
+              </div>
+
+              <div className="saida-card">
+                <h4>Cientista de dados e modelação computacional</h4>
+                <p>
+                  Utiliza modelos matemáticos, simulações e algoritmos para prever propriedades e acelerar a descoberta de novos materiais.
+                </p>
+                <p><strong>Onde trabalha:</strong> centros de investigação, empresas tecnológicas e indústria avançada.</p>
+              </div>
+
+              <div className="saida-card">
+                <h4>Engenheiro de I&amp;D</h4>
+                <p>
+                  Desenvolve e testa novas soluções com grafeno, desde a investigação aplicada até à criação de protótipos.
+                </p>
+                <p><strong>Onde trabalha:</strong> indústria, empresas de inovação e centros de investigação.</p>
+              </div>
+
+            </div>
+
+            <p>
+              Não existe um único caminho. O grafeno é uma área interdisciplinar que integra perfis teóricos, experimentais, tecnológicos e computacionais.
+            </p>
+          </CollapsibleBlock>
+
+          <CollapsibleBlock title="Investigação em Portugal e na Europa">
+              <div className="grafeno-bloco grafeno-bloco--investigacao">
+                <div className="grafeno-bloco__texto">
+                  <p>
+                  O grafeno é hoje estudado em universidades, centros de investigação e também em empresas tecnológicas. Em Portugal, existem instituições com trabalho relevante nesta área, muitas delas integradas em redes europeias de investigação.
+                  </p>
+
+                  <p>
+                  Universidades como a{" "}
+                    <a href="https://www.uminho.pt" target="_blank" rel="noopener noreferrer">
+                      Universidade do Minho
+                    </a>, a{" "}
+                    <a href="https://www.up.pt" target="_blank" rel="noopener noreferrer">
+                      Universidade do Porto
+                    </a>, a{" "}
+                    <a href="https://www.ua.pt" target="_blank" rel="noopener noreferrer">
+                      Universidade de Aveiro
+                    </a> e o{" "}
+                    <a href="https://tecnico.ulisboa.pt" target="_blank" rel="noopener noreferrer">
+                      Instituto Superior Técnico
+                    </a> têm grupos dedicados a nanomateriais e materiais bidimensionais.
+                  </p>
+
+                  <p>
+                  O <a href="https://inl.int" target="_blank" rel="noopener noreferrer">
+                    INL — Laboratório Ibérico Internacional de Nanotecnologia
+                  </a>, em Braga, destaca-se como uma infraestrutura científica de referência na Europa, desenvolvendo investigação em áreas como eletrónica, energia e saúde. É também um local onde trabalham investigadores e engenheiros altamente qualificados.
+                  </p>
+
+                  <p>
+                  A nível europeu, o <a href="https://graphene-flagship.eu" target="_blank" rel="noopener noreferrer">
+                    Graphene Flagship</a> reúne universidades, centros de investigação e empresas num dos maiores projetos científicos da União Europeia, promovendo a colaboração entre investigação e indústria e criando oportunidades de formação, estágios e carreiras científicas.
+                  </p>
+
+                  <p>
+                  Para além da investigação académica, o grafeno está já presente em vários setores industriais — da eletrónica à energia, da saúde aos materiais avançados — o que significa que as oportunidades profissionais vão muito além do laboratório.
+                  </p>
+
+                  <p>
+                  Para um estudante, o percurso passa geralmente por uma formação universitária sólida, seguida de especialização através de mestrado ou doutoramento, muitas vezes integrada em projetos internacionais.
+                  </p>
+                </div>
+            <div className="grafeno-bloco__imagem grafeno-bloco__imagem--investigacao">
+              <img
+                src={images.investigacao}
+                alt="Investigação sobre o grafeno"
+              />
+            </div>
+            </div>
+          </CollapsibleBlock>
+
+          <CollapsibleBlock title="O grafeno na indústria">
+            <p>
+              O grafeno já está presente em diferentes setores industriais, desde a produção de materiais até ao desenvolvimento de tecnologias e à integração em produtos finais.
+            </p>
+
+            <IndustriaGrid cards={industriaCards} />
+          </CollapsibleBlock>
+
         </Section>
+
       </main>
 
       <Footer />

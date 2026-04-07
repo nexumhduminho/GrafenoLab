@@ -9,7 +9,7 @@ export default function Navbar() {
         <a href="#oque">O que é?</a>
         <a href="#propriedades">Propriedades</a>
         <a href="#aplicacoes">Aplicações</a>
-        <a href="#futuro">Formação e Profissões</a>
+        <a href="#formacao">Formação e Profissões</a>
       </nav>
     </header>
   );

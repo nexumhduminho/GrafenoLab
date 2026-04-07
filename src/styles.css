@@ -247,6 +247,18 @@ img {
   border-radius: 18px;
 }
 
+/* Links: sublinhado aparece  no hover para melhorar a legibilidade. */
+a {
+  color: #9ccde2;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+a:hover {
+  text-decoration: underline;
+  opacity: 0.9;
+}
+
 /* AUDIO CARD */
 
 .audio-card {
@@ -612,6 +624,7 @@ img {
 .infografico-title {
   margin-bottom: 1.2rem;
   color: #38bdf8;
+  text-align: center;
 }
 
 .infografico-image {
@@ -673,6 +686,196 @@ img {
   line-height: 1.7;
 }
 
+/* ==============================
+   Formação e Profissões — Áreas
+============================== */
+
+.areas-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.area-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 1rem;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.2s ease, border 0.2s ease, box-shadow 0.2s ease;
+}
+
+.area-card:hover {
+  transform: translateY(-4px);
+  border-color: #38bdf8;
+}
+
+.area-card.active {
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 1px #38bdf8;
+}
+
+.area-card span {
+  font-size: 1.7rem;
+}
+
+.area-card h4 {
+  margin: 0.75rem 0 0.4rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: -0.01em;
+}
+
+.area-card p {
+  font-size: 1rem;
+  line-height: 1.55;
+  opacity: 0.9;
+}
+
+.areas-detail {
+  margin-top: 1.5rem;
+  padding-top: 1.2rem;
+}
+
+.areas-detail h4 {
+  margin-top: 1.2rem;
+  color: #38bdf8;
+  font-size: 1.2rem;
+  font-weight: 700;
+  border-left: 3px solid #38bdf8;
+  padding-left: 0.5rem;
+}
+
+.areas-detail p {
+  margin-bottom: 0.8rem;
+  white-space: pre-line;
+}
+
+.areas-detail--desktop {
+  display: block;
+  padding-bottom: 1.2rem;
+}
+
+.area-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.area-detail-mobile {
+  display: none;
+  white-space: pre-line;
+  margin-top: 1rem;
+}
+
+.area-detail-mobile p {
+  margin: 0;
+  line-height: 1.6;
+  opacity: 0.9;
+}
+
+@media (max-width: 768px) {
+  .areas-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .areas-detail--desktop {
+    display: none;
+  }
+
+  .area-detail-mobile {
+    display: block;
+  }
+}
+
+/* ==============================
+   Saídas profissionais
+============================== */
+
+.saidas-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+.saida-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 1rem 1.2rem;
+}
+
+.saida-card h4 {
+  margin-bottom: 0.7rem;
+  color: #38bdf8;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.saida-card p {
+  margin-bottom: 0.6rem;
+  line-height: 1.55;
+}
+
+.saida-card p:last-child {
+  margin-bottom: 0;
+}
+
+@media (max-width: 768px) {
+  .saidas-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.industria-grid {
+  margin-top: 1.5rem;
+}
+
+.industria-card {
+  position: relative;
+}
+
+.industria-card h4 {
+  color: #38bdf8;
+  margin-bottom: 0.75rem;
+}
+
+.industria-dot {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.industria-legenda {
+  margin-top: 1.5rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.industria-legenda span {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.legenda-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
 /* FOOTER */
 
 .footer {
@@ -730,6 +933,10 @@ img {
   grid-template-columns: 1fr 1fr;
   }
 
+  .areas-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
 }
 
 /* MOBILE */
@@ -753,6 +960,10 @@ img {
   }
 
   .multimedia-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .areas-grid {
     grid-template-columns: 1fr;
   }
 
