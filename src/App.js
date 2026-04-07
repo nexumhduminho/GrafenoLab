@@ -7,12 +7,13 @@ import AudioCard from "./components/AudioCard";
 import QuizCard from "./components/QuizCard";
 import CollapsibleBlock from "./components/CollapsibleBlock.jsx";
 import IndustriaGrid from "./components/IndustriaGrid";
+import industriaCards from "./data/industriaData";
 import Footer from "./components/Footer";
 
 import { images } from "./data/images";
 import { BarChart3, Brain, Headphones } from "lucide-react";
 import { areaDetails } from "./data/areaDetails";
-import industriaCards from "./data/industriaData";
+
 
 import {
   quizOQueEGrafeno,
@@ -32,27 +33,35 @@ export default function App() {
   const [activeArea, setActiveArea] = useState("fisica");
   
   useEffect(() => {
+    const isDesktop = window.innerWidth >= 1024;
+
     if (activeQuiz && quizRef.current) {
       quizRef.current.scrollIntoView({
         behavior: "smooth",
-        block: "start",
+        block: isDesktop ? "start" : "nearest",
       });
+      return;
     }
 
     if (showInfografico && infograficoRef.current) {
       infograficoRef.current.scrollIntoView({
         behavior: "smooth",
-        block: "start",
+        block: isDesktop ? "start" : "nearest",
       });
     }
+  }, [activeQuiz, showInfografico]);
 
-    if (window.innerWidth > 768 && areaDetailRef.current) {
+      useEffect(() => {
+      const isDesktop = window.innerWidth >= 1024;
+
+      if (!isDesktop) return;
+      if (!activeArea || !areaDetailRef.current) return;
+
       areaDetailRef.current.scrollIntoView({
         behavior: "smooth",
         block: "nearest",
       });
-    }
-  }, [activeQuiz, showInfografico, activeArea]);
+    }, [activeArea]);
 
   return (
     <div className="app">
@@ -260,7 +269,10 @@ O grafeno é, precisamente, uma dessas camadas individuais da grafite. Enquanto 
   title="Infográfico"
   description="Resumo sobre a descoberta, propriedades e importância científica do grafeno."
   buttonText="Ver infográfico"
-  onButtonClick={() => setShowInfografico(true)}
+  onButtonClick={() => {
+  setActiveQuiz(null);
+  setShowInfografico(true);
+  }}
 />
 
 <MediaCard
@@ -270,7 +282,10 @@ O grafeno é, precisamente, uma dessas camadas individuais da grafite. Enquanto 
   title="Quiz rápido"
   description="Consolide o que aprendeu com 5 perguntas de resposta rápida."
   buttonText="Começar quiz"
-  onButtonClick={() => setActiveQuiz(quizOQueEGrafeno)}
+  onButtonClick={() => {
+  setShowInfografico(false);
+  setActiveQuiz(quizOQueEGrafeno);
+  }}
 />
 
 </div>
@@ -304,12 +319,10 @@ O grafeno é, precisamente, uma dessas camadas individuais da grafite. Enquanto 
           className="card-button secondary"
           onClick={() => {
             setShowInfografico(false);
-            setTimeout(() => {
-              mediaRef.current?.scrollIntoView({
-                behavior: "smooth",
-                block: "start",
-              });
-            }, 100);
+            mediaRef.current?.scrollIntoView({
+              behavior: "smooth",
+              block: "nearest",
+            });
           }}
         >
           Fechar
