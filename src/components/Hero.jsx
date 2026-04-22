@@ -23,8 +23,8 @@ export default function Hero() {
             Explorar o tema
           </a>
 
-          <a href="#lab" className="hero__button hero__button--secondary">
-            Laboratório virtual
+          <a href={process.env.PUBLIC_URL + '/laboratorio-virtual/index.html'} className="hero__button hero__button--secondary">
+  Laboratório virtual
           </a>
 
           <a href="#metaverso" className="hero__button hero__button--secondary">
