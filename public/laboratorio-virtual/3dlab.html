@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Grafeno 3D – Simulador VR Profissional</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #020617;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            user-select: none;
+        }
+
+        /* HUD Glassmorphism */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+            border-radius: 12px;
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+        }
+
+        .hud-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        /* Mini-mapa */
+        #minimap-container {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 2px solid rgba(56, 189, 248, 0.5);
+            background: rgba(2, 6, 23, 0.8);
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.2);
+            pointer-events: none;
+        }
+
+        #minimap {
+            width: 100%;
+            height: 100%;
+        }
+
+        .info-popup {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%) scale(0.9);
+            opacity: 0;
+            pointer-events: none;
+            width: 400px;
+            max-width: 90vw;
+            z-index: 50;
+        }
+        
+        .info-popup.active {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+            pointer-events: auto;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #10b981, #34d399);
+            transition: width 0.3s ease;
+        }
+
+        /* Objetivos Dinâmicos */
+        .objective-item {
+            display: flex;
+            align-items: center;
+            margin-top: 8px;
+            font-size: 0.85rem;
+            color: #cbd5e1;
+            transition: color 0.3s;
+        }
+        .objective-item.completed {
+            color: #10b981;
+            text-decoration: line-through;
+        }
+        .objective-icon {
+            margin-right: 8px;
+            font-size: 1rem;
+        }
+
+        #controls-hint {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+        }
+
+        .key {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            padding: 5px 10px;
+            border-radius: 4px;
+            margin: 0 2px;
+            font-family: monospace;
+            font-weight: bold;
+        }
+
+        #VRButton {
+            z-index: 20 !important;
+            backdrop-filter: blur(5px);
+            background: rgba(0,0,0,0.5) !important;
+            border: 1px solid #38bdf8 !important;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- UI Overlay -->
+    <div id="ui-layer">
+        <div class="hud-header">
+            <div class="glass-panel p-4 min-w-[250px]">
+                <h1 class="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400">Grafeno 3D Lab</h1>
+                <div class="mt-2 text-sm text-gray-300">Fase: <span id="ui-phase-name" class="text-emerald-400">Inicialização</span></div>
+                
+                <div id="progress-container" class="mt-3">
+                    <div class="flex justify-between text-xs mb-1">
+                        <span id="ui-score-label">Progresso</span>
+                        <span id="ui-score">0%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div id="ui-progress" class="progress-fill"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-panel p-4 max-w-[300px] text-sm hidden md:block" id="objectives-panel">
+                <h3 class="text-cyan-400 font-bold mb-2">Diretrizes (HUD)</h3>
+                <div id="objectives-list">
+                    <!-- Gerado dinamicamente -->
+                </div>
+            </div>
+        </div>
+
+        <div id="minimap-container">
+            <canvas id="minimap" width="150" height="150"></canvas>
+        </div>
+
+        <div id="controls-hint" class="glass-panel p-3 text-sm">
+            <span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> Mover | <span class="key">←</span><span class="key">→</span> Rodar | VR Ready
+        </div>
+    </div>
+
+    <!-- Modals de Informação -->
+    <div id="modal-info" class="glass-panel p-6 info-popup">
+        <h2 id="modal-title" class="text-2xl font-bold text-emerald-400 mb-2">Título</h2>
+        <p id="modal-desc" class="text-gray-200 text-sm mb-4">Descrição científica aqui.</p>
+        <button id="modal-btn" class="w-full py-2 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded text-white font-bold hover:opacity-90 transition cursor-pointer">
+            Continuar
+        </button>
+    </div>
+
+    <!-- Motor 3D -->
+    <script type="module">
+        import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.150.0/build/three.module.js';
+        import { VRButton } from 'https://cdn.jsdelivr.net/npm/three@0.150.0/examples/jsm/webxr/VRButton.js';
+
+        // ==========================================
+        // 1. CORE SYSTEMS
+        // ==========================================
+
+        class InputSystem {
+            constructor() {
+                this.keys = {};
+                window.addEventListener("keydown", e => {
+                    this.keys[e.key.toLowerCase()] = true;
+                    SoundManager.init();
+                });
+                window.addEventListener("keyup", e => this.keys[e.key.toLowerCase()] = false);
+            }
+            isPressed(k1, k2 = null) {
+                return this.keys[k1] || (k2 && this.keys[k2]);
+            }
+        }
+
+        class PhysicsSystem {
+            // Um sistema simples de deteção de colisões radiais (AABB/Sphere)
+            static checkProximity(playerPosition, entities, radius, onEnter, onStay = null) {
+                for (let i = 0; i < entities.length; i++) {
+                    const ent = entities[i];
+                    if (!ent.active) continue;
+                    
+                    const dist = playerPosition.distanceTo(ent.position);
+                    if (dist < radius) {
+                        onEnter(ent, i, dist);
+                    } else if (onStay && dist < radius * 3) {
+                        onStay(ent, i, dist); // Efeito de atração/magnetismo
+                    }
+                }
+            }
+        }
+
+        const SoundManager = {
+            ctx: null,
+            init() {
+                if (this.ctx) return;
+                const AC = window.AudioContext || window.webkitAudioContext;
+                if(AC) this.ctx = new AC();
+            },
+            playTone(freq, type, duration, vol = 0.1, sweep = false) {
+                if (!this.ctx) return;
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = type; osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                if (sweep) osc.frequency.exponentialRampToValueAtTime(freq * 2.5, this.ctx.currentTime + duration);
+                gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
+                osc.start(this.ctx.currentTime); osc.stop(this.ctx.currentTime + duration);
+            },
+            playCollect() { this.init(); this.playTone(400, 'sine', 0.15, 0.2, true); },
+            playLevelUp() {
+                this.init();
+                [440, 554, 659, 830, 880].forEach((freq, i) => setTimeout(() => this.playTone(freq, 'triangle', 0.4, 0.15), i * 120));
+            },
+            playUI() { this.init(); this.playTone(800, 'square', 0.05, 0.05); },
+            playError() { this.init(); this.playTone(150, 'sawtooth', 0.3, 0.2); },
+            playEnergize() { this.init(); this.playTone(1200, 'sine', 0.1, 0.05); }
+        };
+
+        class UIManager {
+            constructor() {
+                this.phaseEl = document.getElementById('ui-phase-name');
+                this.scoreEl = document.getElementById('ui-score');
+                this.scoreLabel = document.getElementById('ui-score-label');
+                this.progressEl = document.getElementById('ui-progress');
+                this.objList = document.getElementById('objectives-list');
+                this.modal = document.getElementById('modal-info');
+                
+                this.minimapCanvas = document.getElementById('minimap');
+                this.minimapCtx = this.minimapCanvas.getContext('2d');
+            }
+
+            updateScore(current, max, label) {
+                this.scoreEl.innerText = `${current} / ${max}`;
+                this.progressEl.style.width = `${(current / max) * 100}%`;
+                this.scoreLabel.innerText = label;
+            }
+
+            setPhase(name) { this.phaseEl.innerText = name; }
+
+            setObjectives(objectives) {
+                this.objList.innerHTML = objectives.map((obj, i) => `
+                    <div class="objective-item" id="obj-${i}">
+                        <span class="objective-icon">○</span> <span class="text">${obj}</span>
+                    </div>
+                `).join('');
+            }
+
+            completeObjective(index) {
+                const el = document.getElementById(`obj-${index}`);
+                if(el && !el.classList.contains('completed')) {
+                    el.classList.add('completed');
+                    el.querySelector('.objective-icon').innerText = '●';
+                    SoundManager.playUI();
+                }
+            }
+
+            showModal(title, desc, btnText = "Continuar") {
+                return new Promise(resolve => {
+                    SoundManager.playUI();
+                    document.getElementById('modal-title').innerText = title;
+                    document.getElementById('modal-desc').innerText = desc;
+                    this.modal.classList.add('active');
+                    
+                    const btn = document.getElementById('modal-btn');
+                    const newBtn = btn.cloneNode(true);
+                    newBtn.innerText = btnText;
+                    btn.parentNode.replaceChild(newBtn, btn);
+
+                    newBtn.addEventListener('click', () => {
+                        SoundManager.playUI();
+                        this.modal.classList.remove('active');
+                        resolve();
+                    });
+                });
+            }
+
+            // Mapeia mundo 3D (X,Z de -50 a 50) para Canvas 2D (0 a 150)
+            updateMinimap(playerPos, dots) {
+                const ctx = this.minimapCtx;
+                ctx.clearRect(0, 0, 150, 150);
+                
+                // Grelha de radar
+                ctx.strokeStyle = 'rgba(56, 189, 248, 0.2)';
+                ctx.beginPath();
+                ctx.arc(75, 75, 70, 0, Math.PI * 2);
+                ctx.stroke();
+
+                const mapCoord = (val) => ((val + 50) / 100) * 150;
+
+                // Desenhar entidades
+                dots.forEach(dot => {
+                    ctx.fillStyle = dot.color;
+                    ctx.beginPath();
+                    ctx.arc(mapCoord(dot.x), mapCoord(dot.z), dot.size || 2, 0, Math.PI*2);
+                    ctx.fill();
+                });
+
+                // Desenhar Jogador
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(mapCoord(playerPos.x), mapCoord(playerPos.z), 4, 0, Math.PI*2);
+                ctx.fill();
+            }
+        }
+
+        class VFXManager {
+            constructor(scene) { this.scene = scene; this.particles = []; }
+            createExplosion(position, color = 0x10b981) {
+                const geo = new THREE.BufferGeometry();
+                const count = 15;
+                const posArray = new Float32Array(count * 3);
+                const velocities = [];
+                for(let i=0; i<count; i++) {
+                    posArray[i*3] = position.x; posArray[i*3+1] = position.y; posArray[i*3+2] = position.z;
+                    velocities.push((Math.random() - 0.5) * 0.2, (Math.random() - 0.5) * 0.2, (Math.random() - 0.5) * 0.2);
+                }
+                geo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+                const mat = new THREE.PointsMaterial({ color, size: 0.3, transparent: true, blending: THREE.AdditiveBlending });
+                const points = new THREE.Points(geo, mat);
+                this.scene.add(points);
+                this.particles.push({ mesh: points, velocities, life: 1.0 });
+            }
+            update() {
+                for (let i = this.particles.length - 1; i >= 0; i--) {
+                    let p = this.particles[i]; p.life -= 0.02;
+                    if (p.life <= 0) {
+                        this.scene.remove(p.mesh); p.mesh.geometry.dispose(); p.mesh.material.dispose();
+                        this.particles.splice(i, 1); continue;
+                    }
+                    p.mesh.material.opacity = p.life;
+                    const positions = p.mesh.geometry.attributes.position.array;
+                    for(let j=0; j<positions.length/3; j++) {
+                        positions[j*3] += p.velocities[j*3] * (p.life + 0.5);
+                        positions[j*3+1] += p.velocities[j*3+1] * (p.life + 0.5);
+                        positions[j*3+2] += p.velocities[j*3+2] * (p.life + 0.5);
+                    }
+                    p.mesh.geometry.attributes.position.needsUpdate = true;
+                }
+            }
+        }
+
+        // ==========================================
+        // 2. FINITE STATE MACHINE (FSM)
+        // ==========================================
+        
+        class StateMachine {
+            constructor(game) {
+                this.game = game;
+                this.states = {};
+                this.currentState = null;
+            }
+            addState(name, stateClass) {
+                this.states[name] = new stateClass(this.game);
+            }
+            async changeState(name) {
+                if(this.currentState && this.currentState.exit) this.currentState.exit();
+                this.currentState = this.states[name];
+                if(this.currentState && this.currentState.enter) await this.currentState.enter();
+            }
+            update(delta, time) {
+                if(this.currentState && this.currentState.update) this.currentState.update(delta, time);
+            }
+        }
+
+        // --- ESTADOS DO JOGO ---
+
+        class IntroState {
+            constructor(game) { this.game = game; }
+            async enter() {
+                this.game.ui.setPhase("Booting Sequence");
+                await this.game.ui.showModal("SISTEMA INICIADO", "Bem-vindo ao Lab Virtual. O seu avatar foi miniaturizado à escala nanométrica.", "Próximo");
+                await this.game.ui.showModal("Missão", "Precisamos sintetizar Grafeno. Use WASD para se mover e evite as anomalias vermelhas.", "INICIAR SIMULAÇÃO");
+                SoundManager.playLevelUp();
+                this.game.fsm.changeState('Level1');
+            }
+        }
+
+        class Level1State {
+            constructor(game) { this.game = game; this.score = 0; this.target = 20; }
+            
+            async enter() {
+                this.game.ui.setPhase("Síntese de Carbono");
+                this.game.ui.setObjectives(["Evitar as anomalias radioativas (vermelhas)", "Coletar 20 átomos de carbono puro (verdes)"]);
+                this.game.ui.updateScore(0, this.target, "Carbono Coletado");
+                
+                // Uso de InstancedMesh para performance PRO
+                this.setupInstancedAtoms();
+                this.setupInstancedImpurities();
+            }
+
+            setupInstancedAtoms() {
+                const count = 50;
+                const geo = new THREE.IcosahedronGeometry(0.4, 0);
+                const mat = new THREE.MeshStandardMaterial({ color: 0x10b981, emissive: 0x059669 });
+                this.atomsMesh = new THREE.InstancedMesh(geo, mat, count);
+                this.atomsData = [];
+                const dummy = new THREE.Object3D();
+
+                for(let i=0; i<count; i++) {
+                    const pos = new THREE.Vector3((Math.random() - 0.5) * 80, 1 + Math.random() * 2, (Math.random() - 0.5) * 80);
+                    dummy.position.copy(pos); dummy.updateMatrix();
+                    this.atomsMesh.setMatrixAt(i, dummy.matrix);
+                    this.atomsData.push({ active: true, position: pos, initialY: pos.y, phase: Math.random() * Math.PI*2 });
+                }
+                this.game.scene.add(this.atomsMesh);
+            }
+
+            setupInstancedImpurities() {
+                const count = 10;
+                const geo = new THREE.DodecahedronGeometry(0.5);
+                const mat = new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0x991b1b });
+                this.impuritiesMesh = new THREE.InstancedMesh(geo, mat, count);
+                this.impuritiesData = [];
+                const dummy = new THREE.Object3D();
+
+                for(let i=0; i<count; i++) {
+                    const pos = new THREE.Vector3((Math.random() - 0.5) * 70, 1.5, (Math.random() - 0.5) * 70);
+                    dummy.position.copy(pos); dummy.updateMatrix();
+                    this.impuritiesMesh.setMatrixAt(i, dummy.matrix);
+                    this.impuritiesData.push({ active: true, position: pos, initialY: pos.y, phase: Math.random() * Math.PI*2 });
+                }
+                this.game.scene.add(this.impuritiesMesh);
+            }
+
+            update(delta, time) {
+                const playerPos = this.game.getPlayerPos();
+                const dummy = new THREE.Object3D();
+                let minimapDots = [];
+
+                // Atualizar Anomalias (Inimigos)
+                for(let i=0; i < this.impuritiesData.length; i++) {
+                    let imp = this.impuritiesData[i];
+                    if(!imp.active) continue;
+                    
+                    // Animação flutuante
+                    imp.position.y = imp.initialY + Math.sin(time * 3 + imp.phase) * 0.5;
+                    dummy.position.copy(imp.position);
+                    dummy.rotation.set(time, time*0.5, 0);
+                    dummy.updateMatrix();
+                    this.impuritiesMesh.setMatrixAt(i, dummy.matrix);
+                    
+                    minimapDots.push({x: imp.position.x, z: imp.position.z, color: '#ef4444', size: 3});
+
+                    // Colisão
+                    if(playerPos.distanceTo(imp.position) < 2.0) {
+                        const dir = playerPos.clone().sub(imp.position); dir.y = 0; dir.normalize();
+                        this.game.playerRig.position.addScaledVector(dir, 3); // Repelir
+                        SoundManager.playError();
+                        this.game.vfx.createExplosion(imp.position, 0xef4444);
+                        this.score = Math.max(0, this.score - 2);
+                        this.game.ui.updateScore(this.score, this.target, "Carbono Coletado");
+                    }
+                }
+                this.impuritiesMesh.instanceMatrix.needsUpdate = true;
+
+                // Atualizar Átomos Coletáveis
+                for(let i=0; i < this.atomsData.length; i++) {
+                    let atom = this.atomsData[i];
+                    if(!atom.active) continue;
+
+                    minimapDots.push({x: atom.position.x, z: atom.position.z, color: '#10b981'});
+
+                    const dist = playerPos.distanceTo(atom.position);
+                    if(dist < 8.0) atom.position.lerp(playerPos, 0.08); // Magnetismo
+                    
+                    if(dist < 2.0) { // Coletado
+                        atom.active = false;
+                        dummy.position.set(999,999,999); // Move fora da vista
+                        this.game.vfx.createExplosion(atom.position);
+                        SoundManager.playCollect();
+                        this.score++;
+                        this.game.ui.updateScore(this.score, this.target, "Carbono Coletado");
+                        
+                        if(this.score >= this.target) {
+                            this.game.ui.completeObjective(1);
+                            this.game.fsm.changeState('Level2');
+                            return; // Evitar erros iterativos
+                        }
+                    } else {
+                        atom.position.y = atom.initialY + Math.sin(time * 2 + atom.phase) * 0.3;
+                        dummy.position.copy(atom.position);
+                    }
+                    
+                    dummy.updateMatrix();
+                    this.atomsMesh.setMatrixAt(i, dummy.matrix);
+                }
+                this.atomsMesh.instanceMatrix.needsUpdate = true;
+                
+                this.game.ui.updateMinimap(playerPos, minimapDots);
+            }
+
+            exit() {
+                this.game.scene.remove(this.atomsMesh);
+                this.game.scene.remove(this.impuritiesMesh);
+            }
+        }
+
+        class Level2State {
+            constructor(game) { this.game = game; this.nodes = []; this.energizedCount = 0; }
+            
+            async enter() {
+                SoundManager.playLevelUp();
+                this.game.ui.setPhase("Estruturação Hexagonal");
+                this.game.ui.setObjectives(["Caminhar sobre os nós cinzentos", "Energizar toda a rede de Grafeno"]);
+                
+                await this.game.ui.showModal("Fase 2: Estruturação", "A estrutura do grafeno é uma rede hexagonal 2D. Atravesse os nós desenergizados (cinzentos) para os ativar e formar ligações covalentes perfeitas.");
+                
+                this.buildLattice();
+            }
+
+            buildLattice() {
+                this.latticeGroup = new THREE.Group();
+                this.game.scene.add(this.latticeGroup);
+                const nodeGeo = new THREE.SphereGeometry(0.3, 16, 16);
+                const radius = 1.5; const width = Math.sqrt(3) * radius; const height = 2 * radius;
+                const rings = 3; 
+
+                for (let q = -rings; q <= rings; q++) {
+                    let r1 = Math.max(-rings, -q - rings);
+                    let r2 = Math.min(rings, -q + rings);
+                    for (let r = r1; r <= r2; r++) {
+                        let x = width * (q + r/2); let z = height * 0.75 * r;
+                        const pos1 = new THREE.Vector3(x, 0, z - radius/2);
+                        const pos2 = new THREE.Vector3(x, 0, z + radius/2);
+                        [pos1, pos2].forEach(p => {
+                            const mat = new THREE.MeshStandardMaterial({ color: 0x475569, emissive: 0x1e293b });
+                            const mesh = new THREE.Mesh(nodeGeo, mat);
+                            mesh.position.copy(p); mesh.position.y = -5;
+                            mesh.userData = { targetY: 1 + Math.sin(p.x)*0.2 + Math.cos(p.z)*0.2, active: true };
+                            this.latticeGroup.add(mesh);
+                            this.nodes.push(mesh);
+                        });
+                    }
+                }
+                this.game.ui.updateScore(0, this.nodes.length, "Rede Energizada");
+            }
+
+            update(delta, time) {
+                const playerPos = this.game.getPlayerPos();
+                let minimapDots = [];
+
+                this.nodes.forEach(node => {
+                    minimapDots.push({x: node.position.x, z: node.position.z, color: node.userData.active ? '#475569' : '#34d399'});
+                    
+                    // Animação de subida e float
+                    if(node.position.y < node.userData.targetY) node.position.y += delta * 3;
+                    else node.position.y = node.userData.targetY + Math.sin(time + node.position.x)*0.1;
+
+                    // Colisão
+                    if (node.userData.active && playerPos.distanceTo(node.position) < 2.5) {
+                        node.userData.active = false;
+                        node.material = new THREE.MeshStandardMaterial({ color: 0x34d399, emissive: 0x059669 });
+                        SoundManager.playEnergize();
+                        this.game.vfx.createExplosion(node.position, 0x34d399);
+                        this.energizedCount++;
+                        this.game.ui.updateScore(this.energizedCount, this.nodes.length, "Rede Energizada");
+                        
+                        if(this.energizedCount >= this.nodes.length) {
+                            this.game.ui.completeObjective(1);
+                            setTimeout(() => this.game.fsm.changeState('Level3'), 1000);
+                            this.energizedCount = -999; // Lock
+                        }
+                    }
+                });
+
+                this.game.ui.updateMinimap(playerPos, minimapDots);
+            }
+
+            exit() { this.game.scene.remove(this.latticeGroup); }
+        }
+
+        class Level3State {
+            constructor(game) { this.game = game; this.exhibits = []; this.readCount = 0; }
+            
+            async enter() {
+                SoundManager.playLevelUp();
+                this.game.ui.setPhase("Aplicações Tecnológicas");
+                this.game.ui.setObjectives(["Descobrir bateria de grafeno", "Analisar telas flexíveis", "Inspecionar chip quântico"]);
+                this.game.ui.updateScore(0, 3, "Tecnologias Lidas");
+                
+                await this.game.ui.showModal("Fase 3: O Futuro", "A sua rede estável formou uma folha de grafeno. Explore os pedestais ao redor para descobrir o impacto desta maravilha nanométrica no mundo real.");
+                this.spawnExhibits();
+            }
+
+            spawnExhibits() {
+                const configs = [
+                    { p: new THREE.Vector3(-12,0,-12), t: "Bateria de Grafeno", c: 0xfacc15, d: "Carregam 5x mais rápido que o lítio.", objIdx: 0, s: 'box' },
+                    { p: new THREE.Vector3(12,0,-12), t: "Telas Flexíveis", c: 0x38bdf8, d: "Ecrãs táteis que se podem dobrar sem quebrar.", objIdx: 1, s: 'cylinder' },
+                    { p: new THREE.Vector3(0,0,15), t: "Chip Quântico", c: 0xf43f5e, d: "Processadores centenas de vezes mais rápidos.", objIdx: 2, s: 'torus' }
+                ];
+
+                configs.forEach(cfg => {
+                    const base = new THREE.Mesh(new THREE.CylinderGeometry(2, 2.5, 0.5, 32), new THREE.MeshStandardMaterial({color: 0x1e293b, metalness: 0.8}));
+                    base.position.copy(cfg.p); base.position.y = 0.25; this.game.scene.add(base);
+                    
+                    const light = new THREE.PointLight(cfg.c, 2, 8); light.position.set(cfg.p.x, cfg.p.y+2, cfg.p.z); this.game.scene.add(light);
+
+                    let geo = cfg.s === 'box' ? new THREE.BoxGeometry(1.5,2,1) : cfg.s === 'cylinder' ? new THREE.CylinderGeometry(1,1,0.1,32) : new THREE.TorusGeometry(1,0.3,16,100);
+                    const holo = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color: cfg.c, emissive: cfg.c, emissiveIntensity: 0.8, wireframe: true, transparent: true, opacity: 0.8}));
+                    holo.position.copy(cfg.p); holo.position.y = 2.5;
+                    if(cfg.s === 'cylinder') holo.rotation.x = Math.PI/2;
+                    
+                    holo.userData = { ...cfg, baseY: 2.5, active: true }; // 'active' means ready to be read
+                    this.game.scene.add(holo);
+                    this.exhibits.push(holo);
+                });
+            }
+
+            update(delta, time) {
+                const playerPos = this.game.getPlayerPos();
+                let minimapDots = [];
+
+                this.exhibits.forEach(holo => {
+                    minimapDots.push({x: holo.position.x, z: holo.position.z, color: '#facc15', size: 4});
+                    holo.rotation.y += delta;
+                    if(holo.geometry.type === "BoxGeometry") holo.rotation.x += delta * 0.5;
+                    holo.position.y = holo.userData.baseY + Math.sin(time * 2) * 0.2;
+
+                    const dist = Math.hypot(playerPos.x - holo.position.x, playerPos.z - holo.position.z);
+                    if(dist < 4.0 && holo.userData.active) {
+                        holo.userData.active = false;
+                        holo.material.wireframe = false;
+                        this.game.ui.completeObjective(holo.userData.objIdx);
+                        this.readCount++;
+                        this.game.ui.updateScore(this.readCount, 3, "Tecnologias Lidas");
+
+                        this.game.ui.showModal(holo.userData.t, holo.userData.d).then(() => {
+                            if(this.readCount >= 3) {
+                                setTimeout(() => {
+                                    SoundManager.playLevelUp();
+                                    this.game.ui.showModal("Simulação Concluída", "Tornou-se um especialista em Grafeno. Reiniciando o laboratório...").then(() => location.reload());
+                                }, 1000);
+                            }
+                            setTimeout(() => { holo.userData.active = true; holo.material.wireframe = true; }, 4000);
+                        });
+                    }
+                });
+                this.game.ui.updateMinimap(playerPos, minimapDots);
+            }
+            exit() {}
+        }
+
+        // ==========================================
+        // 3. MAIN ENGINE CLASS
+        // ==========================================
+
+        class GrapheneSimulator {
+            constructor() {
+                this.initEngine();
+                this.initEnvironment();
+                
+                this.input = new InputSystem();
+                this.ui = new UIManager();
+                this.vfx = new VFXManager(this.scene);
+                
+                // Configuração da Arquitetura FSM
+                this.fsm = new StateMachine(this);
+                this.fsm.addState('Intro', IntroState);
+                this.fsm.addState('Level1', Level1State);
+                this.fsm.addState('Level2', Level2State);
+                this.fsm.addState('Level3', Level3State);
+
+                this.clock = new THREE.Clock();
+                
+                // Boot Game
+                this.fsm.changeState('Intro');
+                this.renderer.setAnimationLoop(() => this.animate());
+            }
+
+            initEngine() {
+                this.scene = new THREE.Scene();
+                this.scene.fog = new THREE.FogExp2(0x020617, 0.02);
+                this.camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+                
+                this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.xr.enabled = true;
+                document.body.appendChild(this.renderer.domElement);
+                document.body.appendChild(VRButton.createButton(this.renderer));
+
+                window.addEventListener('resize', () => {
+                    this.camera.aspect = window.innerWidth / window.innerHeight;
+                    this.camera.updateProjectionMatrix();
+                    this.renderer.setSize(window.innerWidth, window.innerHeight);
+                });
+            }
+
+            initEnvironment() {
+                this.scene.add(new THREE.AmbientLight(0xffffff, 0.2));
+                const dirLight = new THREE.DirectionalLight(0x38bdf8, 1); dirLight.position.set(10, 20, 10); this.scene.add(dirLight);
+                this.scene.add(new THREE.HemisphereLight(0x10b981, 0x0f172a, 0.5));
+
+                const grid = new THREE.GridHelper(100, 50, 0x1e3a8a, 0x0f172a); grid.position.y = -0.1; this.scene.add(grid);
+
+                const starGeo = new THREE.BufferGeometry();
+                const starVerts = [];
+                for(let i=0; i<1000; i++) starVerts.push((Math.random()-0.5)*150, (Math.random()-0.5)*150, (Math.random()-0.5)*150);
+                starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starVerts, 3));
+                this.stars = new THREE.Points(starGeo, new THREE.PointsMaterial({color: 0xffffff, size: 0.1, transparent: true, opacity: 0.5}));
+                this.scene.add(this.stars);
+
+                this.playerRig = new THREE.Group(); this.playerRig.position.set(0, 1.5, 10);
+                this.scene.add(this.playerRig); this.playerRig.add(this.camera);
+                
+                this.avatar = new THREE.Mesh(new THREE.SphereGeometry(0.5, 32, 32), new THREE.MeshStandardMaterial({color: 0x3b82f6, emissive: 0x1d4ed8, wireframe: true}));
+                this.avatar.position.set(0, -0.5, -2); this.playerRig.add(this.avatar);
+            }
+
+            getPlayerPos() {
+                const pos = new THREE.Vector3();
+                this.avatar.getWorldPosition(pos);
+                return pos;
+            }
+
+            handleMovement(delta) {
+                if(document.getElementById('modal-info').classList.contains('active')) return;
+                const speed = 10 * delta; const rotSpeed = 2 * delta;
+                if (this.input.isPressed("a", "arrowleft")) this.playerRig.rotation.y += rotSpeed;
+                if (this.input.isPressed("d", "arrowright")) this.playerRig.rotation.y -= rotSpeed;
+
+                const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(this.playerRig.quaternion);
+                if (this.input.isPressed("w", "arrowup")) this.playerRig.position.addScaledVector(dir, speed);
+                if (this.input.isPressed("s", "arrowdown")) this.playerRig.position.addScaledVector(dir, -speed);
+
+                this.playerRig.position.x = THREE.MathUtils.clamp(this.playerRig.position.x, -45, 45);
+                this.playerRig.position.z = THREE.MathUtils.clamp(this.playerRig.position.z, -45, 45);
+                this.playerRig.position.y = 1.5;
+            }
+
+            animate() {
+                const delta = this.clock.getDelta();
+                const time = this.clock.getElapsedTime();
+
+                this.handleMovement(delta);
+                this.fsm.update(delta, time);
+                this.vfx.update();
+
+                if (this.stars) this.stars.rotation.y = time * 0.02;
+
+                this.renderer.render(this.scene, this.camera);
+            }
+        }
+
+        // Iniciar
+        window.onload = () => new GrapheneSimulator();
+
+    </script>
+</body>
+</html>

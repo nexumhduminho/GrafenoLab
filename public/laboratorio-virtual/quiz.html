@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Grafeno Descomplicado</title>
+
+  <!-- Tailwind CSS via CDN para os estilos -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          animation: {
+            'spin-slow': 'spin 3s linear infinite',
+            'fade-in': 'fadeIn 0.5s ease-in',
+          },
+          keyframes: {
+            fadeIn: {
+              '0%': { opacity: '0' },
+              '100%': { opacity: '1' },
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- FontAwesome Icons via CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- React e ReactDOM via CDN -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  
+  <!-- Babel via CDN para compilar o código React diretamente no navegador -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-slate-50 font-sans text-slate-800">
+  <!-- Onde a aplicação vai ser renderizada -->
+  <div id="root"></div>
+
+  <!-- Lógica da Aplicação -->
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    // --- DADOS DO JOGO E ADAPTAÇÃO POR IDADE ---
+    const GAME_DATA = {
+      teen: {
+        scientist: "Grafi (A Mascote Cientista)",
+        intro: "Olá! Bem-vindo ao Laboratório Virtual da Universidade do Minho! Sabias que o mundo depende de materiais invisíveis? Hoje vamos descobrir o super-herói dos materiais: o Grafeno!",
+        l1_title: "Nível 1: O Favo de Mel Invisível",
+        l1_desc: "O grafeno é como uma folha invisível super resistente! É feito apenas de átomos de carbono colados num padrão que parece um favo de mel. Clica nos átomos em falta para completares a rede!",
+        l2_title: "Nível 2: Superpoderes do Grafeno",
+        l2_desc: "O grafeno tem poderes incríveis! Consegues adivinhar para que serve cada superpoder? Clica num poder e depois na sua utilidade.",
+        l2_pairs: [
+          { id: 'p1', prop: 'Super Condutor (Eletricidade rápida)', app: 'Baterias que carregam em segundos', iconP: <i className="fa-solid fa-bolt text-2xl"></i>, iconA: <i className="fa-solid fa-battery-full text-2xl"></i> },
+          { id: 'p2', prop: 'Transparência (É invisível)', app: 'Ecrãs de telemóvel dobráveis', iconP: <i className="fa-solid fa-droplet text-2xl"></i>, iconA: <i className="fa-solid fa-microchip text-2xl"></i> },
+          { id: 'p3', prop: 'Super Resistente (Mais forte que o aço)', app: 'Armaduras e aviões super leves', iconP: <i className="fa-solid fa-shield text-2xl"></i>, iconA: <i className="fa-solid fa-layer-group text-2xl"></i> }
+        ],
+        l3_title: "Nível 3: Como se faz?",
+        l3_desc: "Precisamos de fabricar grafeno! Qual é o melhor método para cada situação?",
+        l3_q1: "Queremos apenas um pedacinho minúsculo e perfeito para estudar no microscópio. O que usamos?",
+        l3_q2: "Agora queremos fabricar ecrãs gigantes de grafeno para vender a toda a gente! Como fazemos?",
+        l4_title: "Nível 4: Salvar a Cidade",
+        l4_desc: "A cidade precisa da tua ajuda! Escolhe a solução com grafeno para resolver o problema.",
+        l4_q: "Há um novo vírus perigoso. Como o grafeno pode ajudar os médicos da cidade?",
+        l4_a: "Criando um sensor eletrónico super sensível que deteta o vírus na hora!",
+        pitch_title: "Missão Final: O Pitch",
+        pitch_desc: "Tens de convencer o presidente da câmara a investir no grafeno. Escolhe as 3 melhores qualidades para lhe apresentar!"
+      },
+      young: {
+        scientist: "Dr. Silva (Investigador)",
+        intro: "Bem-vindo ao Laboratório de Nanomateriais da Universidade do Minho. A nossa tecnologia depende cada vez mais do invisível. Hoje, vais manipular a estrutura do Grafeno.",
+        l1_title: "Nível 1: Estrutura sp²",
+        l1_desc: "O grafeno tem uma estrutura bidimensional (2D) com hibridização sp², garantindo força e leveza. Completa a rede hexagonal (ligações sigma) adicionando os átomos de carbono em falta.",
+        l2_title: "Nível 2: Propriedades Físico-Químicas",
+        l2_desc: "As propriedades do grafeno ditam o seu uso na indústria. Faz a correspondência correta entre a propriedade e a sua aplicação tecnológica.",
+        l2_pairs: [
+          { id: 'p1', prop: 'Alta Condutividade Elétrica e Térmica', app: 'Supercondensadores e Baterias de Lítio', iconP: <i className="fa-solid fa-bolt text-2xl"></i>, iconA: <i className="fa-solid fa-battery-full text-2xl"></i> },
+          { id: 'p2', prop: 'Elevada Transmitância Ótica', app: 'Ecrãs Touch e Células Solares', iconP: <i className="fa-solid fa-droplet text-2xl"></i>, iconA: <i className="fa-solid fa-microchip text-2xl"></i> },
+          { id: 'p3', prop: 'Elevado Módulo de Young (Rigidez)', app: 'Materiais Compósitos para Aeronáutica', iconP: <i className="fa-solid fa-shield text-2xl"></i>, iconA: <i className="fa-solid fa-layer-group text-2xl"></i> }
+        ],
+        l3_title: "Nível 3: Síntese de Grafeno",
+        l3_desc: "Há uma grande diferença entre a produção no laboratório e na indústria. Escolhe o método de síntese adequado.",
+        l3_q1: "Precisamos de grafeno de altíssima qualidade e sem defeitos para investigação fundamental. Qual o método ideal?",
+        l3_q2: "Precisamos de cobrir uma grande superfície de cobre com grafeno para a indústria eletrónica. Qual é o método escalável?",
+        l4_title: "Nível 4: Aplicações no Mundo Real",
+        l4_desc: "O grafeno está a chegar ao mercado. Resolve este desafio real de engenharia.",
+        l4_q: "O metal da ponte principal da cidade está a sofrer corrosão acelerada. Como atuar?",
+        l4_a: "Aplicar um revestimento de grafeno, pois é impermeável a gases e líquidos (anticorrosão).",
+        pitch_title: "Missão Final: Levar ao Mercado",
+        pitch_desc: "Estás numa reunião com investidores da área tecnológica (Pitch). Seleciona os 3 argumentos mais fortes e baseados na ciência!"
+      },
+      adult: {
+        scientist: "Prof. Doutor (Investigador Principal)",
+        intro: "Bem-vindo ao polo de investigação de nanomateriais da UMinho. O paradigma dos materiais está a mudar. O seu objetivo é rever o mais recente artigo científico sobre o Grafeno e aplicá-lo.",
+        l1_title: "Nível 1: A Rede Cristalina",
+        l1_desc: "O grafeno é um alótropo do carbono, consistindo numa única camada de átomos arranjados numa rede de Bravais hexagonal. Reconstrua a rede cristalina clicando nos nós vazios.",
+        l2_title: "Nível 2: Dados Empíricos",
+        l2_desc: "Analise os dados reais do paper. Associe a propriedade quantificada à sua área de aplicação comercial mais promissora.",
+        l2_pairs: [
+          { id: 'p1', prop: 'Mobilidade Eletrónica até 200.000 cm²/Vs', app: 'Eletrónica de Alta Frequência e Baterias', iconP: <i className="fa-solid fa-bolt text-2xl"></i>, iconA: <i className="fa-solid fa-battery-full text-2xl"></i> },
+          { id: 'p2', prop: 'Absorção de luz de apenas 2.3% por camada', app: 'Optoeletrónica e Painéis Fotovoltaicos', iconP: <i className="fa-solid fa-droplet text-2xl"></i>, iconA: <i className="fa-solid fa-microchip text-2xl"></i> },
+          { id: 'p3', prop: 'Resistência à tração de ~130 GPa', app: 'Reforço Estrutural em Polímeros e Aeronáutica', iconP: <i className="fa-solid fa-shield text-2xl"></i>, iconA: <i className="fa-solid fa-layer-group text-2xl"></i> }
+        ],
+        l3_title: "Nível 3: Métodos de Esfoliação e Deposição",
+        l3_desc: "O desafio do grafeno é a sua produção em massa com qualidade. Selecione a via de síntese correta (Bottom-up vs Top-down).",
+        l3_q1: "Para um estudo cristalográfico, necessita de flocos monocamada quase perfeitos, sem preocupação com rendimento (Top-down). Qual o método?",
+        l3_q2: "Pretende integrar grafeno em wafers de silício, exigindo o crescimento de filmes finos em grandes áreas (Bottom-up). Qual o método?",
+        l4_title: "Nível 4: Implementação Industrial",
+        l4_desc: "O grafeno superou o 'Vale da Morte' da inovação. Selecione a aplicação com maior TRL (Nível de Prontidão Tecnológica) para esta situação.",
+        l4_q: "Um hospital local necessita de biossensores de resposta rápida (Point-of-Care) para deteção de biomarcadores cardíacos.",
+        l4_a: "Utilizar transístores de efeito de campo (FETs) à base de grafeno devido à sua elevada relação superfície-volume.",
+        pitch_title: "Missão Final: Transferência de Tecnologia",
+        pitch_desc: "Está perante Capitalistas de Risco (VCs). Selecione os 3 KPIs / características essenciais para justificar o retorno de investimento (ROI) no grafeno."
+      }
+    };
+
+    const PITCH_OPTIONS = [
+      { id: 1, text: "Material mais fino do mundo (1 átomo)", correct: true },
+      { id: 2, text: "Mais forte que o aço", correct: true },
+      { id: 3, text: "Excelente condutor elétrico e térmico", correct: true },
+      { id: 4, text: "É feito de um metal muito raro e caro", correct: false },
+      { id: 5, text: "É altamente radioativo", correct: false },
+      { id: 6, text: "Derrete facilmente ao sol", correct: false }
+    ];
+
+    // Variável global para manter um único AudioContext (Padrão Singleton)
+    let globalAudioCtx = null;
+
+    function App() {
+      const [screen, setScreen] = useState('intro'); // intro, age_select, l1, l2, l3, l4, final, end
+      const [ageGroup, setAgeGroup] = useState(null); // teen, young, adult
+      const [score, setScore] = useState(0);
+      const [medals, setMedals] = useState([]);
+      
+      // States para Nível 1
+      const [atoms, setAtoms] = useState([false, false, false, false]); // 4 átomos em falta
+      
+      // States para Nível 2
+      const [selectedProp, setSelectedProp] = useState(null);
+      const [matches, setMatches] = useState([]);
+
+      // States para Nível 3
+      const [l3Step, setL3Step] = useState(1);
+      const [l3Feedback, setL3Feedback] = useState("");
+
+      // States para Nível 4
+      const [l4Answered, setL4Answered] = useState(false);
+
+      // States para Final
+      const [selectedPitch, setSelectedPitch] = useState([]);
+
+      // Sistema de Som Otimizado
+      const playSound = (type) => {
+        try {
+          // Inicialização preguiçosa (Lazy Initialization) do AudioContext
+          if (!globalAudioCtx) {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContext) return;
+            globalAudioCtx = new AudioContext();
+          }
+
+          // Se o navegador suspendeu o contexto de áudio (política de autoplay), retomamos
+          if (globalAudioCtx.state === 'suspended') {
+            globalAudioCtx.resume();
+          }
+
+          const ctx = globalAudioCtx;
+          const osc = ctx.createOscillator();
+          const gainNode = ctx.createGain();
+          
+          osc.connect(gainNode);
+          gainNode.connect(ctx.destination);
+          
+          const now = ctx.currentTime;
+
+          if (type === 'click') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(500, now);
+            osc.frequency.exponentialRampToValueAtTime(200, now + 0.1);
+            gainNode.gain.setValueAtTime(0.1, now);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+            osc.start(now);
+            osc.stop(now + 0.1);
+          } else if (type === 'success') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(400, now);
+            osc.frequency.setValueAtTime(600, now + 0.1);
+            gainNode.gain.setValueAtTime(0.1, now);
+            gainNode.gain.linearRampToValueAtTime(0, now + 0.3);
+            osc.start(now);
+            osc.stop(now + 0.3);
+          } else if (type === 'error') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(300, now);
+            osc.frequency.linearRampToValueAtTime(200, now + 0.2);
+            gainNode.gain.setValueAtTime(0.1, now);
+            gainNode.gain.linearRampToValueAtTime(0, now + 0.2);
+            osc.start(now);
+            osc.stop(now + 0.2);
+          } else if (type === 'victory') {
+            osc.type = 'square'; 
+            osc.frequency.setValueAtTime(400, now);
+            osc.frequency.setValueAtTime(500, now + 0.15);
+            osc.frequency.setValueAtTime(600, now + 0.3);
+            osc.frequency.setValueAtTime(800, now + 0.45);
+            
+            gainNode.gain.setValueAtTime(0.1, now);
+            gainNode.gain.setValueAtTime(0.1, now + 0.6); 
+            gainNode.gain.linearRampToValueAtTime(0, now + 1.5); 
+            
+            osc.start(now);
+            osc.stop(now + 1.5);
+          }
+        } catch(e) { console.log("Áudio bloqueado pelo navegador", e); }
+      };
+
+      const data = GAME_DATA[ageGroup || 'teen'];
+
+      const addScore = (points) => setScore(s => s + points);
+      const addMedal = (medalName) => {
+        if (!medals.includes(medalName)) {
+          setMedals(m => [...m, medalName]);
+        }
+      };
+
+      const getProgress = () => {
+        const screens = ['l1', 'l2', 'l3', 'l4', 'final', 'end'];
+        const idx = screens.indexOf(screen);
+        return idx === -1 ? 0 : Math.round(((idx + 1) / screens.length) * 100);
+      };
+
+      // RENDERS
+      const renderHeader = () => (
+        <div className="bg-slate-900 text-white p-4 shadow-lg flex justify-between items-center fixed top-0 w-full z-50">
+          <div className="flex items-center gap-2 font-bold text-xl text-cyan-400">
+            <i className="fa-solid fa-atom animate-spin-slow text-xl"></i> Grafeno Descomplicado
+          </div>
+          {(screen !== 'intro' && screen !== 'age_select') && (
+            <div className="flex items-center gap-6">
+              <div className="hidden md:flex flex-col w-48">
+                <div className="text-xs text-slate-400 mb-1">Progresso</div>
+                <div className="w-full bg-slate-700 rounded-full h-2">
+                  <div className="bg-cyan-400 h-2 rounded-full transition-all duration-500" style={{ width: `${getProgress()}%` }}></div>
+                </div>
+              </div>
+              <div className="flex flex-col items-center">
+                <span className="text-xs text-slate-400">Pontuação</span>
+                <span className="font-bold text-yellow-400">{score}</span>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+
+      const renderIntro = () => (
+        <div className="flex flex-col items-center justify-center min-h-screen pt-16 bg-gradient-to-br from-slate-900 to-blue-900 text-white p-6 text-center">
+          <i className="fa-solid fa-atom text-cyan-400 mb-6 animate-pulse" style={{ fontSize: '80px' }}></i>
+          <h1 className="text-4xl md:text-6xl font-extrabold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-500">
+            Grafeno Descomplicado
+          </h1>
+          <p className="text-xl text-slate-300 max-w-2xl mb-8">
+            Uma jornada interativa pela Universidade do Minho para descobrir o material que vai mudar o futuro.
+          </p>
+          <button 
+            onClick={() => { playSound('click'); setScreen('age_select'); }}
+            className="px-8 py-4 bg-cyan-600 hover:bg-cyan-500 text-white rounded-full font-bold text-lg shadow-lg shadow-cyan-500/30 transition-all hover:scale-105 flex items-center gap-2"
+          >
+            Iniciar Jornada <i className="fa-solid fa-arrow-right"></i>
+          </button>
+        </div>
+      );
+
+      const renderAgeSelect = () => (
+        <div className="flex flex-col items-center justify-center min-h-screen pt-16 bg-slate-50 p-6">
+          <h2 className="text-3xl font-bold text-slate-800 mb-8 text-center">Escolhe o teu perfil de Investigador</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl w-full">
+            <div 
+              className="bg-white p-6 rounded-2xl shadow-xl border-2 border-transparent hover:border-cyan-400 cursor-pointer transition-all hover:-translate-y-2 flex flex-col items-center text-center"
+              onClick={() => { playSound('click'); setAgeGroup('teen'); setScreen('l1'); }}
+            >
+              <div className="bg-green-100 p-4 rounded-full mb-4 text-green-600"><i className="fa-solid fa-graduation-cap" style={{ fontSize: '40px' }}></i></div>
+              <h3 className="text-xl font-bold text-slate-800 mb-2">Jovem Cientista</h3>
+              <p className="text-slate-500 text-sm">12-15 anos. Explicações simples, mascotes divertidas e conceitos visuais!</p>
+            </div>
+            <div 
+              className="bg-white p-6 rounded-2xl shadow-xl border-2 border-transparent hover:border-blue-400 cursor-pointer transition-all hover:-translate-y-2 flex flex-col items-center text-center"
+              onClick={() => { playSound('click'); setAgeGroup('young'); setScreen('l1'); }}
+            >
+              <div className="bg-blue-100 p-4 rounded-full mb-4 text-blue-600"><i className="fa-solid fa-flask" style={{ fontSize: '40px' }}></i></div>
+              <h3 className="text-xl font-bold text-slate-800 mb-2">Estudante Universitário</h3>
+              <p className="text-slate-500 text-sm">16-22 anos. Ciência aprofundada, desafios lógicos e conceitos reais.</p>
+            </div>
+            <div 
+              className="bg-white p-6 rounded-2xl shadow-xl border-2 border-transparent hover:border-purple-400 cursor-pointer transition-all hover:-translate-y-2 flex flex-col items-center text-center"
+              onClick={() => { playSound('click'); setAgeGroup('adult'); setScreen('l1'); }}
+            >
+              <div className="bg-purple-100 p-4 rounded-full mb-4 text-purple-600"><i className="fa-solid fa-microscope" style={{ fontSize: '40px' }}></i></div>
+              <h3 className="text-xl font-bold text-slate-800 mb-2">Investigador</h3>
+              <p className="text-slate-500 text-sm">Adultos. Dados reais do artigo científico, estatísticas e visão de mercado.</p>
+            </div>
+          </div>
+        </div>
+      );
+
+      const renderLevel1 = () => {
+        const isComplete = atoms.every(a => a);
+        
+        const handleAtomClick = (index) => {
+          if(!atoms[index]) {
+            playSound('click');
+            const newAtoms = [...atoms];
+            newAtoms[index] = true;
+            setAtoms(newAtoms);
+            addScore(50);
+          }
+        };
+
+        const nextLevel = () => {
+          playSound('success');
+          addMedal('Explorador Atómico');
+          setScreen('l2');
+        };
+
+        return (
+          <div className="min-h-screen pt-24 pb-12 px-4 bg-slate-50 flex flex-col items-center">
+            <div className="max-w-3xl w-full bg-white rounded-2xl shadow-xl p-8 border border-slate-100 relative overflow-hidden">
+              <div className="absolute top-0 right-0 bg-cyan-100 text-cyan-800 px-4 py-1 rounded-bl-xl font-semibold flex items-center gap-2">
+                <i className="fa-solid fa-atom text-base"></i> {data.scientist} diz:
+              </div>
+              
+              <h2 className="text-2xl md:text-3xl font-bold text-slate-800 mb-4 mt-4">{data.l1_title}</h2>
+              <p className="text-slate-600 mb-8">{data.intro} {data.l1_desc}</p>
+              
+              {/* Hexagon Mini-Game */}
+              <div className="relative w-64 h-64 mx-auto mb-8">
+                 <svg className="absolute top-0 left-0 w-full h-full" viewBox="0 0 100 100">
+                    <line x1="50" y1="10" x2="85" y2="30" stroke="#cbd5e1" strokeWidth="3" />
+                    <line x1="85" y1="30" x2="85" y2="70" stroke="#cbd5e1" strokeWidth="3" />
+                    <line x1="85" y1="70" x2="50" y2="90" stroke="#cbd5e1" strokeWidth="3" />
+                    <line x1="50" y1="90" x2="15" y2="70" stroke="#cbd5e1" strokeWidth="3" />
+                    <line x1="15" y1="70" x2="15" y2="30" stroke="#cbd5e1" strokeWidth="3" />
+                    <line x1="15" y1="30" x2="50" y2="10" stroke="#cbd5e1" strokeWidth="3" />
+                 </svg>
+                 <div className="absolute top-0 left-0 w-full h-full">
+                    <div className="absolute top-[5%] left-[45%] w-8 h-8 bg-slate-800 rounded-full shadow-lg border-2 border-white flex items-center justify-center text-white text-xs">C</div>
+                    <div className="absolute top-[25%] left-[80%] w-8 h-8 bg-slate-800 rounded-full shadow-lg border-2 border-white flex items-center justify-center text-white text-xs">C</div>
+                    
+                    <div onClick={() => handleAtomClick(0)} className={`absolute top-[65%] left-[80%] w-8 h-8 rounded-full shadow-lg border-2 cursor-pointer transition-all flex items-center justify-center text-xs ${atoms[0] ? 'bg-slate-800 border-white text-white' : 'bg-white border-dashed border-cyan-500 animate-pulse text-transparent'}`}>C</div>
+                    <div onClick={() => handleAtomClick(1)} className={`absolute top-[85%] left-[45%] w-8 h-8 rounded-full shadow-lg border-2 cursor-pointer transition-all flex items-center justify-center text-xs ${atoms[1] ? 'bg-slate-800 border-white text-white' : 'bg-white border-dashed border-cyan-500 animate-pulse text-transparent'}`}>C</div>
+                    <div onClick={() => handleAtomClick(2)} className={`absolute top-[65%] left-[10%] w-8 h-8 rounded-full shadow-lg border-2 cursor-pointer transition-all flex items-center justify-center text-xs ${atoms[2] ? 'bg-slate-800 border-white text-white' : 'bg-white border-dashed border-cyan-500 animate-pulse text-transparent'}`}>C</div>
+                    <div onClick={() => handleAtomClick(3)} className={`absolute top-[25%] left-[10%] w-8 h-8 rounded-full shadow-lg border-2 cursor-pointer transition-all flex items-center justify-center text-xs ${atoms[3] ? 'bg-slate-800 border-white text-white' : 'bg-white border-dashed border-cyan-500 animate-pulse text-transparent'}`}>C</div>
+                 </div>
+              </div>
+
+              {isComplete && (
+                <div className="bg-green-50 border border-green-200 text-green-800 p-4 rounded-xl mb-6 flex items-start gap-3 animate-fade-in">
+                  <i className="fa-solid fa-circle-check mt-1 flex-shrink-0 text-xl"></i>
+                  <div>
+                    <p className="font-bold">Estrutura Completa!</p>
+                    <p className="text-sm">Acabaste de montar uma rede hexagonal de carbono, a base estrutural que dá ao grafeno as suas propriedades únicas.</p>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-end">
+                 <button 
+                   onClick={nextLevel}
+                   disabled={!isComplete}
+                   className={`px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-all ${isComplete ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
+                 >
+                   Avançar <i className="fa-solid fa-chevron-right"></i>
+                 </button>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      const renderLevel2 = () => {
+        const isComplete = matches.length === data.l2_pairs.length;
+
+        const handlePropClick = (id) => {
+          if(!matches.includes(id)) {
+            playSound('click');
+            setSelectedProp(id);
+          }
+        };
+
+        const handleAppClick = (id) => {
+          if (selectedProp === id) {
+            playSound('success');
+            setMatches([...matches, id]);
+            setSelectedProp(null);
+            addScore(100);
+          } else if (selectedProp) {
+            playSound('error');
+            addScore(-20); 
+            setSelectedProp(null);
+          }
+        };
+
+        return (
+          <div className="min-h-screen pt-24 pb-12 px-4 bg-slate-50 flex flex-col items-center">
+            <div className="max-w-4xl w-full bg-white rounded-2xl shadow-xl p-8 border border-slate-100">
+              <h2 className="text-2xl md:text-3xl font-bold text-slate-800 mb-2">{data.l2_title}</h2>
+              <p className="text-slate-600 mb-8">{data.l2_desc}</p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                <div className="flex flex-col gap-4">
+                  <h3 className="font-bold text-slate-500 uppercase text-sm mb-2">1. Propriedade / Superpoder</h3>
+                  {data.l2_pairs.map((item) => {
+                    const isMatched = matches.includes(item.id);
+                    const isSelected = selectedProp === item.id;
+                    return (
+                      <button
+                        key={`p_${item.id}`}
+                        onClick={() => handlePropClick(item.id)}
+                        disabled={isMatched}
+                        className={`p-4 rounded-xl border-2 text-left flex items-center gap-4 transition-all
+                          ${isMatched ? 'bg-green-50 border-green-200 opacity-50 cursor-default' : 
+                            isSelected ? 'bg-cyan-50 border-cyan-400 shadow-md transform scale-[1.02]' : 
+                            'bg-white border-slate-200 hover:border-cyan-300'}`}
+                      >
+                        <div className={`${isMatched ? 'text-green-500' : 'text-cyan-500'}`}>{item.iconP}</div>
+                        <span className="font-semibold text-slate-700">{item.prop}</span>
+                        {isMatched && <i className="fa-solid fa-circle-check ml-auto text-green-500 text-xl"></i>}
+                      </button>
+                    )
+                  })}
+                </div>
+
+                <div className="flex flex-col gap-4">
+                  <h3 className="font-bold text-slate-500 uppercase text-sm mb-2">2. Aplicação no Mundo Real</h3>
+                  {[data.l2_pairs[2], data.l2_pairs[0], data.l2_pairs[1]].map((item) => {
+                    const isMatched = matches.includes(item.id);
+                    return (
+                      <button
+                        key={`a_${item.id}`}
+                        onClick={() => handleAppClick(item.id)}
+                        disabled={isMatched}
+                        className={`p-4 rounded-xl border-2 text-left flex items-center gap-4 transition-all
+                          ${isMatched ? 'bg-green-50 border-green-200 opacity-50 cursor-default' : 
+                            selectedProp ? 'bg-white border-dashed border-blue-300 hover:bg-blue-50 cursor-pointer' : 
+                            'bg-slate-50 border-slate-200 cursor-not-allowed opacity-70'}`}
+                      >
+                        <div className="text-blue-500">{item.iconA}</div>
+                        <span className="font-semibold text-slate-700">{item.app}</span>
+                        {isMatched && <i className="fa-solid fa-circle-check ml-auto text-green-500 text-xl"></i>}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div className="flex justify-end border-t border-slate-100 pt-6 mt-4">
+                 <button 
+                   onClick={() => { playSound('success'); setScreen('l3'); }}
+                   disabled={!isComplete}
+                   className={`px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-all ${isComplete ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-500/30' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
+                 >
+                   Avançar Nível <i className="fa-solid fa-chevron-right"></i>
+                 </button>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      const renderLevel3 = () => {
+        const isLevelComplete = l3Step > 2;
+
+        const handleChoice = (method, type) => {
+          if (l3Step === 1) {
+            if (type === 'tape') {
+              playSound('success');
+              setL3Feedback("Correto! O método de esfoliação mecânica (tipo fita-cola) produz amostras perfeitas em pequena escala.");
+              addScore(100);
+              setTimeout(() => { setL3Step(2); setL3Feedback(""); }, 2500);
+            } else {
+              playSound('error');
+              setL3Feedback("Incorreto. A deposição CVD é para escalas maiores e pode ter pequenos defeitos.");
+              addScore(-20);
+            }
+          } else if (l3Step === 2) {
+            if (type === 'cvd') {
+              playSound('success');
+              setL3Feedback("Excelente! A Deposição Química de Vapor (CVD) é ideal para cobrir grandes áreas com qualidade industrial.");
+              addScore(100);
+              setTimeout(() => { setL3Step(3); setL3Feedback(""); addMedal('Mestre da Síntese'); }, 2500);
+            } else {
+              playSound('error');
+              setL3Feedback("Incorreto. Seria impossível descascar grafite com fita-cola para cobrir ecrãs inteiros na fábrica!");
+              addScore(-20);
+            }
+          }
+        };
+
+        return (
+          <div className="min-h-screen pt-24 pb-12 px-4 bg-slate-50 flex flex-col items-center">
+            <div className="max-w-3xl w-full bg-white rounded-2xl shadow-xl p-8 border border-slate-100">
+              <h2 className="text-2xl md:text-3xl font-bold text-slate-800 mb-2">{data.l3_title}</h2>
+              <p className="text-slate-600 mb-8">{data.l3_desc}</p>
+
+              <div className="bg-blue-50 border border-blue-100 p-6 rounded-xl mb-8">
+                <h3 className="font-bold text-blue-900 text-lg flex items-center gap-2 mb-4">
+                  <i className="fa-solid fa-industry"></i> Cenário {l3Step > 2 ? 2 : l3Step}
+                </h3>
+                <p className="text-blue-800 text-lg mb-6">
+                  {l3Step === 1 ? data.l3_q1 : data.l3_q2}
+                </p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <button 
+                    onClick={() => handleChoice('Esfoliação Mecânica (Fita-cola)', 'tape')}
+                    disabled={isLevelComplete || !!l3Feedback}
+                    className="bg-white border-2 border-slate-200 hover:border-cyan-400 p-4 rounded-xl flex flex-col items-center text-center gap-3 transition-all"
+                  >
+                    <div className="bg-slate-100 p-4 rounded-full flex items-center justify-center"><i className="fa-solid fa-layer-group text-slate-600 text-2xl"></i></div>
+                    <div>
+                      <div className="font-bold text-slate-800">Esfoliação Mecânica</div>
+                      <div className="text-xs text-slate-500">Separar camadas fisicamente (ex: Método da fita-cola)</div>
+                    </div>
+                  </button>
+                  
+                  <button 
+                    onClick={() => handleChoice('CVD', 'cvd')}
+                    disabled={isLevelComplete || !!l3Feedback}
+                    className="bg-white border-2 border-slate-200 hover:border-cyan-400 p-4 rounded-xl flex flex-col items-center text-center gap-3 transition-all"
+                  >
+                    <div className="bg-slate-100 p-4 rounded-full flex items-center justify-center"><i className="fa-solid fa-arrow-trend-up text-slate-600 text-2xl"></i></div>
+                    <div>
+                      <div className="font-bold text-slate-800">CVD</div>
+                      <div className="text-xs text-slate-500">Deposição Química de Vapor usando gases como metano</div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {l3Feedback && (
+                <div className={`p-4 rounded-xl mb-6 font-medium ${l3Feedback.includes("Correto") || l3Feedback.includes("Excelente") ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                  {l3Feedback}
+                </div>
+              )}
+
+              <div className="flex justify-end">
+                 <button 
+                   onClick={() => { playSound('success'); setScreen('l4'); }}
+                   disabled={!isLevelComplete}
+                   className={`px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-all ${isLevelComplete ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-500/30' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
+                 >
+                   Avançar para Missão <i className="fa-solid fa-chevron-right"></i>
+                 </button>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      const renderLevel4 = () => {
+        const handleAnswer = (isCorrect) => {
+          setL4Answered(true);
+          if (isCorrect) {
+            playSound('success');
+            addScore(150);
+          } else {
+            playSound('error');
+          }
+        };
+
+        return (
+          <div className="min-h-screen pt-24 pb-12 px-4 bg-slate-50 flex flex-col items-center">
+            <div className="max-w-3xl w-full bg-white rounded-2xl shadow-xl p-8 border border-slate-100 relative overflow-hidden">
+              <div className="absolute top-0 right-0 bg-red-500 text-white px-4 py-1 rounded-bl-xl font-bold flex items-center gap-2 animate-pulse">
+                 Emergência
+              </div>
+
+              <h2 className="text-2xl md:text-3xl font-bold text-slate-800 mb-2 mt-4">{data.l4_title}</h2>
+              <p className="text-slate-600 mb-8">{data.l4_desc}</p>
+
+              <div className="bg-slate-900 text-white p-6 rounded-xl mb-8 shadow-inner">
+                <h3 className="text-cyan-400 font-bold mb-2">SITUAÇÃO:</h3>
+                <p className="text-lg">{data.l4_q}</p>
+              </div>
+
+              <div className="flex flex-col gap-4 mb-8">
+                <button 
+                  onClick={() => handleAnswer(false)}
+                  disabled={l4Answered}
+                  className={`p-4 rounded-xl text-left border-2 transition-all ${l4Answered ? 'opacity-50 border-slate-200 bg-slate-50' : 'border-slate-200 hover:border-slate-400'}`}
+                >
+                  Usar plásticos comuns ou tintas tradicionais (Baixo custo, mas resolve pouco).
+                </button>
+                <button 
+                  onClick={() => handleAnswer(true)}
+                  disabled={l4Answered}
+                  className={`p-4 rounded-xl text-left border-2 transition-all font-semibold ${l4Answered ? 'border-green-500 bg-green-50 text-green-800' : 'border-slate-200 hover:border-cyan-400'}`}
+                >
+                  {data.l4_a}
+                </button>
+                <button 
+                  onClick={() => handleAnswer(false)}
+                  disabled={l4Answered}
+                  className={`p-4 rounded-xl text-left border-2 transition-all ${l4Answered ? 'opacity-50 border-slate-200 bg-slate-50' : 'border-slate-200 hover:border-slate-400'}`}
+                >
+                  Deixar a natureza resolver (Ignorar a inovação tecnológica).
+                </button>
+              </div>
+
+              {l4Answered && (
+                <div className="bg-green-100 text-green-800 p-4 rounded-xl mb-6 font-bold flex items-center gap-2">
+                  <i className="fa-solid fa-circle-check"></i> O problema foi resolvido graças ao grafeno!
+                </div>
+              )}
+
+              <div className="flex justify-end border-t border-slate-100 pt-6">
+                 <button 
+                   onClick={() => { playSound('success'); setScreen('final'); }}
+                   disabled={!l4Answered}
+                   className={`px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-all ${l4Answered ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-500/30' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
+                 >
+                   Ir para o Pitch Final <i className="fa-solid fa-chevron-right"></i>
+                 </button>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      const renderFinal = () => {
+        const handleCheckbox = (opt) => {
+          playSound('click');
+          if (selectedPitch.find(p => p.id === opt.id)) {
+            setSelectedPitch(selectedPitch.filter(p => p.id !== opt.id));
+          } else {
+            if (selectedPitch.length < 3) {
+              setSelectedPitch([...selectedPitch, opt]);
+            }
+          }
+        };
+
+        const submitPitch = () => {
+          playSound('victory'); // Aciona a nova fanfarra de vitória!
+          let correctCount = selectedPitch.filter(p => p.correct).length;
+          addScore(correctCount * 100);
+          addMedal('Inovador Tecnológico');
+          setScreen('end');
+        };
+
+        return (
+          <div className="min-h-screen pt-24 pb-12 px-4 bg-slate-50 flex flex-col items-center">
+            <div className="max-w-3xl w-full bg-white rounded-2xl shadow-xl p-8 border border-slate-100">
+              <div className="flex justify-center mb-6">
+                <div className="bg-yellow-100 text-yellow-700 p-4 rounded-full flex items-center justify-center">
+                  <i className="fa-solid fa-trophy" style={{ fontSize: '48px' }}></i>
+                </div>
+              </div>
+              <h2 className="text-2xl md:text-3xl font-bold text-center text-slate-800 mb-2">{data.pitch_title}</h2>
+              <p className="text-slate-600 text-center mb-8 max-w-xl mx-auto">{data.pitch_desc}</p>
+
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 mb-8">
+                <h3 className="font-bold text-slate-700 mb-4 flex justify-between">
+                  <span>Argumentos Disponíveis:</span>
+                  <span className={`text-sm ${selectedPitch.length === 3 ? 'text-green-600' : 'text-slate-500'}`}>
+                    {selectedPitch.length}/3 selecionados
+                  </span>
+                </h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {PITCH_OPTIONS.map(opt => {
+                    const isSelected = !!selectedPitch.find(p => p.id === opt.id);
+                    return (
+                      <div 
+                        key={opt.id}
+                        onClick={() => handleCheckbox(opt)}
+                        className={`p-4 rounded-lg border-2 cursor-pointer transition-all flex items-start gap-3
+                          ${isSelected ? 'bg-cyan-50 border-cyan-500 shadow-md' : 'bg-white border-slate-200 hover:border-slate-300'}`}
+                      >
+                        <div className={`w-5 h-5 rounded flex-shrink-0 mt-0.5 border flex items-center justify-center
+                          ${isSelected ? 'bg-cyan-500 border-cyan-500 text-white' : 'border-slate-400 bg-white'}`}>
+                          {isSelected && <i className="fa-solid fa-circle-check text-xs"></i>}
+                        </div>
+                        <span className={`text-sm ${isSelected ? 'font-bold text-cyan-900' : 'text-slate-700'}`}>
+                          {opt.text}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div className="flex justify-center">
+                 <button 
+                   onClick={submitPitch}
+                   disabled={selectedPitch.length !== 3}
+                   className={`px-8 py-4 rounded-full font-bold text-lg flex items-center gap-2 transition-all 
+                    ${selectedPitch.length === 3 ? 'bg-green-600 text-white hover:bg-green-700 shadow-xl shadow-green-500/30 hover:scale-105' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
+                 >
+                   Apresentar Pitch e Concluir <i className="fa-solid fa-medal"></i>
+                 </button>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      const renderEnd = () => (
+        <div className="flex flex-col items-center justify-center min-h-screen bg-slate-900 text-white p-6 text-center">
+          <i className="fa-solid fa-trophy text-yellow-400 mb-6 animate-bounce" style={{ fontSize: '80px' }}></i>
+          <h1 className="text-4xl md:text-6xl font-extrabold mb-4 text-white">Missão Cumprida!</h1>
+          
+          <div className="text-2xl text-slate-300 mb-8">
+            Pontuação Final: <span className="font-bold text-yellow-400 text-4xl">{score}</span>
+          </div>
+
+          <div className="bg-slate-800 rounded-2xl p-6 mb-12 max-w-2xl w-full border border-slate-700 shadow-2xl">
+            <h2 className="text-xl font-bold text-cyan-400 mb-4">Medalhas Conquistadas:</h2>
+            <div className="flex flex-wrap justify-center gap-4">
+              {medals.map((m, i) => (
+                <div key={i} className="flex items-center gap-2 bg-slate-700 px-4 py-2 rounded-full border border-slate-600">
+                  <i className="fa-solid fa-medal text-yellow-400 text-xl"></i>
+                  <span className="font-semibold text-sm">{m}</span>
+                </div>
+              ))}
+              {medals.length === 0 && <span className="text-slate-500">Nenhuma medalha conquistada.</span>}
+            </div>
+          </div>
+
+          <div className="relative max-w-3xl">
+            <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-xl blur opacity-30"></div>
+            <div className="relative bg-slate-900 p-8 rounded-xl border border-slate-800">
+              <p className="text-2xl md:text-3xl font-serif italic text-cyan-100 leading-relaxed">
+                "A ciência só transforma o mundo quando é compreendida."
+              </p>
+            </div>
+          </div>
+
+          <button 
+            onClick={() => { playSound('click'); window.location.reload(); }}
+            className="mt-12 text-slate-400 hover:text-white underline decoration-dashed"
+          >
+            Jogar Novamente
+          </button>
+        </div>
+      );
+
+      return (
+        <div>
+          {renderHeader()}
+          <main>
+            {screen === 'intro' && renderIntro()}
+            {screen === 'age_select' && renderAgeSelect()}
+            {screen === 'l1' && renderLevel1()}
+            {screen === 'l2' && renderLevel2()}
+            {screen === 'l3' && renderLevel3()}
+            {screen === 'l4' && renderLevel4()}
+            {screen === 'final' && renderFinal()}
+            {screen === 'end' && renderEnd()}
+          </main>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
