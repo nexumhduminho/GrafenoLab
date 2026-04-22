@@ -27,9 +27,14 @@ export default function Hero() {
   Laboratório virtual
           </a>
 
-          <a href="#metaverso" className="hero__button hero__button--secondary">
-            Metaverso
-          </a>
+          <a 
+  href="https://www.spatial.io/s/GrafenoMinho3D-Hangout-69b2cec3821cd5a28b4fb0f7?share=2617973722789225201" 
+  className="hero__button hero__button--secondary"
+  target="_blank"
+  rel="noopener noreferrer"
+>
+  Metaverso
+        </a>
         </div>
       </div>
     </section>
