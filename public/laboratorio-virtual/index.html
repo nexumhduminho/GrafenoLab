@@ -1,1 +1,1219 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Graphene Discovery Lab - NexumHD</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Rajdhani:wght@300;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #010205; font-family: 'Rajdhani', sans-serif; }
+        #canvas-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+        
+        /* Efeito de Scanline Global (Subtil) */
+        body::after {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 50; background-size: 100% 3px, 3px 100%; pointer-events: none;
+            opacity: 0.15;
+        }
 
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; }
+        .pointer-events-auto { pointer-events: auto; }
+        
+        /* Visual: Neon e Vidro Científico */
+        .glass-panel {
+            background: rgba(4, 9, 20, 0.65);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(0, 255, 255, 0.25);
+            box-shadow: 0 0 25px rgba(0, 255, 255, 0.15), inset 0 0 15px rgba(0, 255, 255, 0.05);
+        }
+
+        .nexa-avatar {
+            width: 70px; height: 70px;
+            border-radius: 50%;
+            background: rgba(0, 10, 30, 0.8);
+            border: 2px solid #00ffff;
+            box-shadow: 0 0 20px #00ffff, inset 0 0 10px #00ffff;
+            display: flex; align-items: center; justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .sci-fi-text { font-family: 'Orbitron', sans-serif; text-shadow: 0 0 10px currentColor; }
+        .typewriter-text { border-right: 2px solid #00ffff; white-space: pre-wrap; word-wrap: break-word; overflow: hidden; text-shadow: 0 0 5px rgba(0,255,255,0.5); }
+
+        @keyframes speak-pulse {
+            0% { box-shadow: 0 0 15px #00ffff; border-color: #00ffff; }
+            50% { box-shadow: 0 0 40px #00ffff, inset 0 0 25px rgba(0,255,255,0.8); border-color: #ffffff; }
+            100% { box-shadow: 0 0 15px #00ffff; border-color: #00ffff; }
+        }
+        .is-speaking { animation: speak-pulse 1.5s infinite; }
+        
+        @keyframes action-glow {
+            0% { box-shadow: 0 0 5px currentColor; transform: scale(1); }
+            50% { box-shadow: 0 0 30px currentColor, inset 0 0 15px currentColor; transform: scale(1.02); border-color: #fff !important; }
+            100% { box-shadow: 0 0 5px currentColor; transform: scale(1); }
+        }
+        .suggested-action { 
+            animation: action-glow 2s infinite !important; 
+            border-width: 2px !important;
+            z-index: 20;
+        }
+
+        .holo-terminal {
+            border: 2px solid rgba(0, 255, 255, 0.5);
+            box-shadow: 0 0 50px rgba(0, 255, 255, 0.2), inset 0 0 30px rgba(0, 255, 255, 0.1);
+            background: rgba(2, 5, 16, 0.95);
+            position: relative;
+            overflow: hidden;
+            border-radius: 12px;
+        }
+        
+        @keyframes terminalBoot {
+            0% { transform: scaleY(0.005) scaleX(0); opacity: 0; box-shadow: 0 0 100px #00ffff; }
+            50% { transform: scaleY(0.005) scaleX(1); opacity: 1; box-shadow: 0 0 50px #00ffff; }
+            100% { transform: scaleY(1) scaleX(1); opacity: 1; }
+        }
+        .terminal-boot-anim { animation: terminalBoot 0.7s cubic-bezier(0.86, 0, 0.07, 1) forwards; }
+
+        @keyframes slideInRight {
+            0% { transform: translateX(120%); opacity: 0; }
+            100% { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slideOutRight {
+            0% { transform: translateX(0); opacity: 1; }
+            100% { transform: translateX(120%); opacity: 0; }
+        }
+        .notif-enter { animation: slideInRight 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        .notif-exit { animation: slideOutRight 0.5s ease forwards; }
+        
+        .badge-icon { filter: drop-shadow(0 0 8px currentColor); }
+        .status-badge { transition: all 0.3s ease; }
+        
+        .ui-transition { transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
+        .ui-hidden { opacity: 0 !important; transform: translateY(20px) !important; pointer-events: none; }
+        #transition-overlay { transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1); }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.5); }
+        ::-webkit-scrollbar-thumb { background: #00ffff; border-radius: 4px; box-shadow: 0 0 10px #00ffff; }
+
+        .btn-holographic {
+            background: linear-gradient(45deg, transparent 5%, rgba(0, 255, 255, 0.15) 5%);
+            border: 1px solid #00ffff;
+            color: #00ffff;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            font-family: 'Orbitron', sans-serif;
+            clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+            text-shadow: 0 0 5px currentColor;
+        }
+        .btn-holographic:hover:not(:disabled) {
+            background: rgba(0, 255, 255, 0.4);
+            box-shadow: 0 0 20px #00ffff;
+            text-shadow: 0 0 10px #ffffff;
+            border-color: #ffffff;
+        }
+        .btn-holographic:disabled {
+            border-color: #555; color: #888; background: rgba(20,20,20,0.8); cursor: not-allowed;
+            box-shadow: none; text-shadow: none;
+        }
+
+        #start-screen { background: radial-gradient(circle at center, #020815 0%, #000000 100%); }
+    </style>
+</head>
+<body class="text-white">
+
+    <!-- Start Screen -->
+    <div id="start-screen" class="absolute inset-0 z-50 flex flex-col items-center justify-center text-center px-4 pointer-events-auto">
+        <h2 class="text-xl text-cyan-400 font-bold tracking-widest mb-2 sci-fi-text">NEXUMHD - HUMANIDADES DIGITAIS UMINHO</h2>
+        <h1 class="text-5xl md:text-7xl font-bold mb-6 text-white sci-fi-text drop-shadow-[0_0_25px_rgba(0,255,255,0.9)]">GRAPHENE<br>DISCOVERY LAB</h1>
+        <p class="max-w-2xl text-lg md:text-xl text-gray-300 mb-10 text-shadow-sm">Ano 2035. Um material extremamente fino e resistente está prestes a transformar a tecnologia, a medicina e a sustentabilidade global. Assuma o papel de explorador científico.</p>
+        <button onclick="window.startExperience()" class="btn-holographic px-10 py-4 text-xl font-bold tracking-widest">
+            INICIAR EXPERIÊNCIA VIRTUAL
+        </button>
+        <button onclick="window.resetExperience()" class="mt-4 text-gray-500 hover:text-cyan-500 text-xs tracking-widest uppercase underline transition-colors">
+            Limpar Progresso
+        </button>
+    </div>
+
+    <!-- Canvas Container -->
+    <div id="canvas-container"></div>
+
+    <!-- UI Layer -->
+    <div id="ui-layer" class="hidden">
+        <div id="transition-overlay" class="absolute inset-0 bg-[#010205] opacity-0 pointer-events-none z-0"></div>
+        <div id="notif-container" class="absolute top-24 right-6 z-50 flex flex-col gap-3 pointer-events-none w-64 md:w-80"></div>
+
+        <header class="p-6 flex justify-between items-start ui-transition relative z-10">
+            <div class="glass-panel px-6 py-2 rounded-br-2xl border-l-4 border-cyan-400">
+                <h1 class="sci-fi-text text-xl font-bold text-cyan-400">GRAPHENE LAB</h1>
+                <p class="text-xs text-gray-400 tracking-widest uppercase" id="room-indicator">Ato 1 - Descoberta</p>
+            </div>
+            
+            <div class="glass-panel px-5 py-3 rounded-bl-2xl flex flex-col gap-2 min-w-[220px] border-r-4 border-cyan-500 bg-black/80 backdrop-blur-md">
+                <div class="flex justify-between items-end">
+                    <div class="flex flex-col">
+                        <span class="text-[10px] text-cyan-500 sci-fi-text tracking-widest uppercase leading-none">Estatuto</span>
+                        <span class="text-lg text-white font-bold sci-fi-text leading-none">NÍVEL <span id="ui-level" class="text-cyan-300">1</span></span>
+                    </div>
+                    <span id="ui-xp" class="text-xs font-bold text-cyan-400 sci-fi-text tracking-wider drop-shadow-[0_0_5px_currentColor]">0 / 50 XP</span>
+                </div>
+                <div class="w-full bg-cyan-900/40 h-1.5 rounded-full overflow-hidden border border-cyan-800/50">
+                    <div id="ui-xp-bar" class="bg-gradient-to-r from-cyan-600 via-cyan-400 to-cyan-200 h-full w-0 shadow-[0_0_15px_#00ffff] transition-all duration-700 ease-out"></div>
+                </div>
+                <div id="ui-badges-mini" class="flex gap-2 justify-end min-h-[20px] mt-1"></div>
+            </div>
+        </header>
+
+        <div id="center-modal" class="flex-1 flex items-center justify-center pointer-events-auto p-4 hidden relative z-20"></div>
+
+        <div id="game-module-overlay" class="hidden absolute inset-0 z-50 flex items-center justify-center p-4 md:p-8 pointer-events-auto bg-[#010308]/85 backdrop-blur-lg transition-opacity duration-500 opacity-0">
+            <div class="holo-terminal w-full h-full max-w-7xl max-h-[90vh] flex flex-col terminal-boot-anim">
+                <header class="px-6 py-4 flex justify-between items-center border-b border-cyan-500/50 bg-[#020a15]/90 relative z-20 shadow-[0_5px_20px_rgba(0,255,255,0.1)]">
+                    <div class="flex items-center gap-3">
+                        <span class="w-3 h-3 inline-block bg-cyan-400 rounded-full animate-pulse shadow-[0_0_15px_#00ffff]"></span>
+                        <h2 id="game-module-title" class="text-cyan-400 sci-fi-text font-bold text-xl md:text-2xl tracking-widest drop-shadow-[0_0_8px_currentColor]">NEXUM_OS // LIGAÇÃO</h2>
+                    </div>
+                    <button onclick="window.closeGameModule()" class="text-cyan-400 hover:text-white hover:bg-red-500/80 border border-cyan-500 hover:border-red-500 px-4 py-2 rounded transition-all font-bold sci-fi-text tracking-wider text-sm flex items-center gap-2 hover:shadow-[0_0_15px_#ff0000]">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        ENCERRAR SESSÃO
+                    </button>
+                </header>
+                
+                <div id="module-loader" class="absolute inset-0 z-10 flex flex-col items-center justify-center bg-[#010308] top-[73px]">
+                    <div class="relative w-24 h-24 mb-6">
+                        <div class="absolute inset-0 border-4 border-cyan-900 border-t-cyan-400 rounded-full animate-spin shadow-[0_0_20px_#00ffff]"></div>
+                        <div class="absolute inset-2 border-4 border-cyan-900 border-b-cyan-300 rounded-full animate-[spin_1.5s_reverse_infinite]"></div>
+                    </div>
+                    <h3 class="text-2xl text-cyan-400 sci-fi-text tracking-[0.2em] mb-2 animate-pulse drop-shadow-[0_0_10px_currentColor]">A INICIALIZAR MÓDULO</h3>
+                    <p id="loader-details" class="text-cyan-600 font-mono text-sm tracking-wider">Aguardar verificação de rede...</p>
+                </div>
+
+                <iframe id="game-frame" class="w-full flex-1 border-none relative z-0 opacity-0 transition-opacity duration-1000 bg-[#000]" src=""></iframe>
+            </div>
+        </div>
+
+        <footer class="p-6 flex flex-col md:flex-row gap-6 items-end justify-between pointer-events-auto ui-transition relative z-10">
+            <div class="glass-panel p-4 md:p-6 rounded-2xl flex-1 max-w-3xl flex gap-4 items-center border-t-4 border-cyan-500 relative mt-8 md:mt-0 shadow-[0_10px_30px_rgba(0,255,255,0.15)]">
+                <div class="absolute -top-6 left-6 flex gap-2 items-end">
+                    <span class="text-[10px] md:text-xs font-bold text-cyan-200 sci-fi-text tracking-widest bg-black/95 px-3 py-1 rounded-t-lg border-t border-l border-r border-cyan-800">IA: GRAFENOMINHO</span>
+                    <span id="ai-status" class="status-badge text-[10px] md:text-xs font-bold text-green-400 sci-fi-text tracking-widest bg-black/95 px-3 py-1 rounded-t-lg border-t border-l border-r border-green-800 flex items-center gap-2 drop-shadow-[0_0_5px_currentColor]">
+                        <span class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse shadow-[0_0_5px_#00ff00]"></span> EM ESPERA
+                    </span>
+                </div>
+
+                <button onclick="window.repeatCurrentDialogue()" class="absolute -top-4 right-6 bg-black/90 border border-cyan-800 text-cyan-500 hover:text-cyan-300 hover:border-cyan-400 hover:bg-cyan-900/80 transition-all rounded-full p-2 z-20 hover:shadow-[0_0_10px_#00ffff]" title="Repetir Orientações">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                </button>
+
+                <div id="ai-avatar-container" class="nexa-avatar shrink-0 relative transition-all duration-300">
+                    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" class="w-full h-full absolute inset-0">
+                        <defs>
+                            <linearGradient id="nexa-skin" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#bbedff" />
+                                <stop offset="100%" stop-color="#0088ff" />
+                            </linearGradient>
+                            <linearGradient id="nexa-suit" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#001133" />
+                                <stop offset="100%" stop-color="#00ffff" />
+                            </linearGradient>
+                            <filter id="nexa-glow">
+                                <feGaussianBlur stdDeviation="2" result="blur" />
+                                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                            </filter>
+                        </defs>
+                        <circle cx="50" cy="50" r="46" fill="none" stroke="#00ffff" stroke-width="1.5" stroke-dasharray="10 15" class="origin-center animate-[spin_10s_linear_infinite]" opacity="0.8"/>
+                        <path d="M 15 100 C 15 75, 35 65, 50 65 C 65 65, 85 75, 85 100 Z" fill="url(#nexa-suit)" opacity="0.9" />
+                        <path d="M 42 65 L 42 50 L 58 50 L 58 65 Z" fill="url(#nexa-skin)" />
+                        <line x1="45" y1="55" x2="55" y2="55" stroke="#00ffff" stroke-width="1.5" opacity="0.8" filter="url(#nexa-glow)"/>
+                        <line x1="45" y1="60" x2="55" y2="60" stroke="#00ffff" stroke-width="1.5" opacity="0.8" filter="url(#nexa-glow)"/>
+                        <path d="M 33 40 C 33 10, 67 10, 67 40 C 67 55, 55 65, 50 65 C 45 65, 33 55, 33 40 Z" fill="url(#nexa-skin)" />
+                        <path d="M 28 35 C 40 45, 60 45, 72 35 C 68 48, 55 52, 50 52 C 45 52, 32 48, 28 35 Z" fill="#00ffff" filter="url(#nexa-glow)" opacity="1" />
+                        <circle cx="50" cy="22" r="3" fill="#ffffff" filter="url(#nexa-glow)" />
+                    </svg>
+                </div>
+                <div class="flex-1 min-h-[60px] flex items-center">
+                    <p id="nexa-text" class="text-lg md:text-xl font-medium leading-relaxed typewriter-text"></p>
+                </div>
+            </div>
+
+            <div class="flex gap-4 shrink-0 transition-all duration-300">
+                <button id="btn-prev" onclick="window.navigate(-1)" class="btn-holographic px-6 py-3 font-bold flex items-center gap-2" disabled>
+                    ◀ VOLTAR
+                </button>
+                <button id="btn-next" onclick="window.navigate(1)" class="btn-holographic px-6 py-3 font-bold flex items-center gap-2">
+                    AVANÇAR ▶
+                </button>
+                <!-- Ajuste Crucial: Caminhos relativos para a mesma pasta Hostgator -->
+                <button id="btn-quiz" onclick="window.openGameModule('./quiz.html', 'NEXUM_DB // QUIZ AVALIAÇÃO')" class="btn-holographic px-6 py-3 font-bold bg-purple-900/40 border-purple-400 text-purple-400 hidden shadow-[0_0_15px_rgba(168,85,247,0.3)]">
+                    INICIAR QUIZ
+                </button>
+                <button id="btn-drone" onclick="window.openGameModule('./drone.html', 'SISTEMA_VÔO // DRONE EXTRATOR')" class="btn-holographic px-6 py-3 font-bold bg-orange-900/40 border-orange-400 text-orange-400 hidden shadow-[0_0_15px_rgba(249,115,22,0.3)]">
+                    PILOTAR DRONE
+                </button>
+                <button id="btn-3dlab" onclick="window.openGameModule('./3dlab.html', 'SANDBOX_VR // GRAFENO 3D LAB')" class="btn-holographic px-6 py-3 font-bold bg-pink-900/40 border-pink-400 text-pink-400 hidden shadow-[0_0_15px_rgba(236,72,153,0.3)]">
+                    ENTRAR NO 3D LAB
+                </button>
+                <button id="btn-cert" onclick="window.showCertificate()" class="btn-holographic px-6 py-3 font-bold bg-green-900/40 border-green-400 text-green-400 hidden shadow-[0_0_15px_rgba(34,197,94,0.3)]">
+                    OBTER CERTIFICADO
+                </button>
+            </div>
+        </footer>
+    </div>
+
+<script>
+    /** * ==========================================================
+     * 📁 MÓDULO VIRTUAL: GameData (Static & Immutable Data)
+     * ==========================================================
+     */
+    const GameData = {
+        API_KEY: "",
+        ROOM_Z_SPACING: 60,
+        XP_LEVELS: [0, 50, 120, 220, 350, 500],
+        BADGE_DATA: {
+            'curioso': { icon: '🔍', name: 'Investigador', desc: 'Análise tátil de estrutura atómica', color: '#00ffff' },
+            'teorico': { icon: '🧠', name: 'Mestre da Teoria', desc: 'Validação 100% no Quiz', color: '#8800ff' },
+            'piloto': { icon: '🚁', name: 'Ás da Aviação', desc: 'Controlo perfeito do Drone Extrator', color: '#ff6600' },
+            'arquiteto': { icon: '🏗️', name: 'Arquiteto Nano', desc: 'Síntese concluída no 3D Lab', color: '#ff00aa' }
+        },
+        scriptData: [
+            { title: "Zona 1 - Recepção", roomName: "CAMPUS VIRTUAL UMINHO", actionPrompt: "AGUARDAR: NAVEGAÇÃO", targetBtn: "btn-next", dialogues: ["Bem-vindo ao NexumHD! Eu sou o GrafenoMinho, a sua inteligência artificial de suporte.", "Estou aqui para ser o seu guia e mentor nesta jornada. O nosso objetivo hoje é dominar os segredos do Grafeno.", "Sinta-se livre para explorar. Quando se sentir preparado para a primeira descoberta, clique em 'AVANÇAR'."] },
+            { title: "Zona 2 - O que é o Grafeno", roomName: "ESTRUTURA E DESCOBERTA", actionPrompt: "AGUARDAR: ROTAÇÃO 3D", targetBtn: "btn-next", dialogues: ["A jornada do grafeno começou com curiosidade pura: usar fita adesiva numa mina de lápis de grafite.", "A grafite é apenas um 'mil-folhas' de carbono. Tente clicar e arrastar a estrutura central holográfica para observá-la de todos os ângulos.", "Ao conseguir isolar uma única dessas folhas... nasce a magia do grafeno. Avance para vermos a sua estrutura molecular!"] },
+            { title: "Zona 3 - Estrutura do Grafeno", roomName: "CONSTITUIÇÃO MOLECULAR", actionPrompt: "AGUARDAR: INTERAÇÃO 3D", targetBtn: "btn-next", dialogues: ["Esta é a elegante matriz bidimensional. Repare como cada átomo de carbono realiza exatamente 3 ligações perfeitas.", "É a famosa 'colmeia' hexagonal. Esta hibridização (sp²) confere-lhe uma estabilidade que desafia a lógica clássica.", "Não hesite em manipular o modelo 3D. A sua exploração tátil ajudará a fixar o conceito de que tem apenas um átomo de espessura."] },
+            { title: "Zona 4 - Propriedades", roomName: "ESTAÇÕES INTERATIVAS", actionPrompt: "AGUARDAR: OBSERVAÇÃO", targetBtn: "btn-next", dialogues: ["Excelente progresso! A estrutura que acabou de ver resulta em propriedades que parecem ficção científica.", "Na esquerda: a incrível condutividade. No centro: a transparência e flexibilidade absolutas.", "Na direita: uma resistência mecânica formidável, cerca de 200 vezes superior ao aço. Observe bem e avance."] },
+            { title: "Zona 5 - Métodos de Produção", roomName: "SÍNTESE DE GRAFENO", actionPrompt: "AGUARDAR: OBSERVAÇÃO", targetBtn: "btn-next", dialogues: ["Mas como o transformamos num produto real? À sua esquerda, a Esfoliação Mecânica, perfeita para a precisão da pesquisa científica.", "À direita, o futuro da indústria: a Deposição Química de Vapor (CVD), que 'cultiva' grafeno em larga escala sobre cobre usando metano.", "Memorize estas diferenças vitais. Elas vão ser a chave para o sucesso nos seus testes de aptidão."] },
+            { title: "Zona 6 - Aplicações", roomName: "IMPACTO SETORIAL", actionPrompt: "AGUARDAR: NAVEGAÇÃO", targetBtn: "btn-next", dialogues: ["Com estas propriedades, o limite é a nossa imaginação. Analise o carrossel holográfico dos 5 setores vitais.", "Desde a saúde com biossensores de vírus, até à aviação super-leve e baterias revolucionárias.", "Você completou brilhantemente a nossa fase teórica! Agora, vamos provar o que aprendemos."] },
+            { title: "Avaliação", roomName: "TERMINAL: QUIZ GRAFENO", actionPrompt: "AGUARDAR: INICIAR MÓDULO", targetBtn: "btn-quiz", requiresModule: true, moduleId: "quiz", rewardDialogue: "Excelente prestação no Quiz! Os teus registos neuronais foram validados. O acesso à próxima zona foi desbloqueado. Podes avançar.", dialogues: ["Conectámos com sucesso ao Terminal de Operações. Estás a ir muito bem!", "Para garantir que consolidas este conhecimento de ponta, preparei um pequeno desafio mental.", "Nota: A próxima área está bloqueada. Clica em 'INICIAR QUIZ' para estabelecer a ponte de dados e provar o que vales."] },
+            { title: "Arcade Científico", roomName: "MISSÃO: DRONE EXTRATOR", actionPrompt: "AGUARDAR: INICIAR MÓDULO", targetBtn: "btn-drone", requiresModule: true, moduleId: "drone", rewardDialogue: "Amostras recolhidas com precisão cirúrgica! A barreira de segurança física foi levantada. Podes avançar para o laboratório de imersão.", dialogues: ["Análise teórica: Impecável. Agora precisamos testar os teus reflexos e foco prático.", "A comporta de acesso à Zona 8 requer validação motora. Vais assumir o controlo de um Drone Extrator.", "Pilota com precisão! Clica em 'PILOTAR DRONE' para injetar a interface de voo no ecrã principal."] },
+            { title: "Imersão Profunda", roomName: "SIMULADOR: 3D LAB", actionPrompt: "AGUARDAR: INICIAR MÓDULO", targetBtn: "btn-3dlab", requiresModule: true, moduleId: "lab3d", rewardDialogue: "Síntese nanométrica perfeita. Manipulaste a matéria como um verdadeiro pioneiro. A tua jornada está completa, avança para a certificação final.", dialogues: ["Desempenho fenomenal. A tua intuição científica está cada vez mais apurada.", "Para desbloquearmos a saída do laboratório, precisamos de uma simulação final: construir uma rede atómica à mão.", "Clica em 'ENTRAR NO 3D LAB' e mostra-me do que és capaz nesta Sandbox nanoscópica!"] },
+            { title: "Encerramento", roomName: "SALA DE CERTIFICAÇÃO", actionPrompt: "AGUARDAR: RECOLHER CERTIFICADO", targetBtn: "btn-cert", dialogues: ["Missão integralmente concluída com um sucesso extraordinário. Sinto muito orgulho no teu progresso.", "As tuas capacidades serão fundamentais para a inovação nanotecnológica do amanhã.", "Clica em 'OBTER CERTIFICADO' para gerar a tua merecida credencial de Explorador NexumHD!"] }
+        ]
+    };
+
+    /** * ==========================================================
+     * 📁 MÓDULO VIRTUAL: AppState (Global Mutable State)
+     * ==========================================================
+     */
+    const AppState = {
+        currentRoom: 0,
+        diagIndex: 0,
+        
+        user: { 
+            xp: 0, 
+            level: 1, 
+            badges: [] 
+        },
+
+        modules: {
+            quiz: { completed: false, score: null },
+            drone: { completed: false },
+            lab3d: { completed: false }
+        },
+
+        visitedRooms: new Set([0]),
+        flags: { 
+            isInterrupting: false, 
+            isNavigating: false, 
+            interactedStructure: false 
+        }
+    };
+
+    /** * ==========================================================
+     * 📁 MÓDULO VIRTUAL: Storage (Persistência no Browser)
+     * ==========================================================
+     */
+    const Storage = (function() {
+        const STORAGE_KEY = "nexum_graphene_lab_v1";
+
+        function saveState() {
+            try {
+                // Criar um clone do estado para tratar o Set incompatível com JSON
+                const stateToSave = {
+                    ...AppState,
+                    visitedRooms: Array.from(AppState.visitedRooms) 
+                };
+                
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
+                console.log("[NEXUM_OS] Estado da simulação salvaguardado na memória local.");
+            } catch (error) {
+                // Previne crashes em iframes isoladas ou modo anónimo
+                console.warn("[NEXUM_OS] Alerta: Não foi possível guardar o progresso localmente.", error);
+            }
+        }
+
+        function loadState() {
+            try {
+                const data = localStorage.getItem(STORAGE_KEY);
+                if (data) {
+                    const parsedData = JSON.parse(data);
+                    
+                    if (parsedData.visitedRooms) {
+                        parsedData.visitedRooms = new Set(parsedData.visitedRooms);
+                    }
+                    
+                    Object.assign(AppState, parsedData);
+                    console.log("[NEXUM_OS] Ligação neural restabelecida. Progresso recuperado.");
+                    return true;
+                }
+                return false;
+            } catch (error) {
+                console.error("[NEXUM_OS] Ficheiro de gravação corrompido. A iniciar novo perfil.", error);
+                return false;
+            }
+        }
+
+        function clearState() {
+            localStorage.removeItem(STORAGE_KEY);
+            console.log("[NEXUM_OS] Memória limpa. Reset total efetuado.");
+            location.reload(); // Recarrega a página para reiniciar limpo
+        }
+
+        return { saveState, loadState, clearState };
+    })();
+
+    /** * ==========================================================
+     * 📁 MÓDULO VIRTUAL: AudioSys
+     * ==========================================================
+     */
+    const AudioSys = (function() {
+        let audioCtx = null;
+        let ambientEngine = { osc1: null, osc2: null, osc3: null, filter: null, lfo: null, lfoGain: null };
+        let currentAudio = null;
+
+        function init() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        function startAmbient() {
+            init();
+            // Substituição do Ruído Branco por um Acorde Profundo e Relaxante (Drone)
+            const osc1 = audioCtx.createOscillator(); 
+            const osc2 = audioCtx.createOscillator(); 
+            const osc3 = audioCtx.createOscillator(); 
+            const filter = audioCtx.createBiquadFilter(); 
+            const gainNode = audioCtx.createGain();
+            
+            // Frequências baseadas em harmonias agradáveis (C2, ligeiro detune, e Sub-bass C1)
+            osc1.type = 'sine'; osc1.frequency.value = 65.41; 
+            osc2.type = 'sine'; osc2.frequency.value = 65.8; // Efeito "Phasing" subtil
+            osc3.type = 'triangle'; osc3.frequency.value = 32.70; // Peso nos graves (Sub)
+            
+            // Filtro suave para remover agudos irritantes
+            filter.type = 'lowpass'; filter.frequency.value = 250; filter.Q.value = 1; 
+            gainNode.gain.value = 0.08; // Volume geral reduzido e confortável
+            
+            osc1.connect(filter); osc2.connect(filter); osc3.connect(filter); 
+            filter.connect(gainNode); gainNode.connect(audioCtx.destination);
+            osc1.start(); osc2.start(); osc3.start();
+
+            // Modulação muito lenta (respiração da sala)
+            const lfo = audioCtx.createOscillator(); const lfoGain = audioCtx.createGain();
+            lfo.type = 'sine'; lfo.frequency.value = 0.05; lfoGain.gain.value = 100; 
+            lfo.connect(lfoGain); lfoGain.connect(filter.frequency); lfo.start();
+
+            ambientEngine = { osc1, osc2, osc3, filter, lfo, lfoGain };
+        }
+
+        function changeAmbient(roomIndex) {
+            if (!audioCtx || !ambientEngine.osc1) return;
+            // Progressão harmónica musical consoante a sala que está a explorar
+            const p = [
+                { f1: 65.41, f2: 65.8, f3: 32.70, cutoff: 250, lfoFreq: 0.05, lfoGain: 100 }, // Sala 0: Base
+                { f1: 73.42, f2: 73.8, f3: 36.71, cutoff: 300, lfoFreq: 0.08, lfoGain: 120 }, // Sala 1: Tensão leve
+                { f1: 82.41, f2: 82.8, f3: 41.20, cutoff: 350, lfoFreq: 0.1,  lfoGain: 150 }, // Sala 2: Descoberta
+                { f1: 98.00, f2: 98.4, f3: 49.00, cutoff: 400, lfoFreq: 0.12, lfoGain: 180 }, // Sala 3: Propriedades
+                { f1: 55.00, f2: 55.4, f3: 27.50, cutoff: 200, lfoFreq: 0.04, lfoGain: 80 },  // Sala 4: Profundidade
+                { f1: 87.31, f2: 87.7, f3: 43.65, cutoff: 450, lfoFreq: 0.15, lfoGain: 200 }, // Sala 5: Aplicações
+                { f1: 65.41, f2: 65.8, f3: 32.70, cutoff: 250, lfoFreq: 0.05, lfoGain: 100 }, // Sala 6: Quiz
+                { f1: 73.42, f2: 73.8, f3: 36.71, cutoff: 300, lfoFreq: 0.08, lfoGain: 120 }, // Sala 7: Drone
+                { f1: 82.41, f2: 82.8, f3: 41.20, cutoff: 350, lfoFreq: 0.1,  lfoGain: 150 }, // Sala 8: 3D Lab
+                { f1: 130.81,f2: 131.2,f3: 65.41, cutoff: 600, lfoFreq: 0.2,  lfoGain: 250 }  // Sala 9: Fim (Claro e brilhante)
+            ][roomIndex] || { f1: 65.41, f2: 65.8, f3: 32.70, cutoff: 250, lfoFreq: 0.05, lfoGain: 100 };
+            
+            const now = audioCtx.currentTime;
+            const transitionTime = 3; // Transição suave de 3 segundos entre notas
+            ambientEngine.osc1.frequency.linearRampToValueAtTime(p.f1, now + transitionTime); 
+            ambientEngine.osc2.frequency.linearRampToValueAtTime(p.f2, now + transitionTime);
+            ambientEngine.osc3.frequency.linearRampToValueAtTime(p.f3, now + transitionTime);
+            ambientEngine.filter.frequency.linearRampToValueAtTime(p.cutoff, now + transitionTime); 
+            ambientEngine.lfo.frequency.linearRampToValueAtTime(p.lfoFreq, now + transitionTime);
+            ambientEngine.lfoGain.gain.linearRampToValueAtTime(p.lfoGain, now + transitionTime); 
+        }
+
+        function playSFX(type) {
+            if (!audioCtx) return;
+            init();
+            const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            
+            if (type === 'xp') {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(880, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(1760, audioCtx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+            } else if (type === 'levelUp') {
+                const osc2 = audioCtx.createOscillator(); osc.type = 'square'; osc2.type = 'sawtooth';
+                osc.frequency.setValueAtTime(440, audioCtx.currentTime); osc.frequency.setValueAtTime(554.37, audioCtx.currentTime + 0.15); osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.3);
+                osc2.frequency.setValueAtTime(440, audioCtx.currentTime); osc2.frequency.setValueAtTime(554.37, audioCtx.currentTime + 0.15); osc2.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.3);
+                osc2.connect(gain);
+                gain.gain.setValueAtTime(0, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0.15, audioCtx.currentTime + 0.05); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.6);
+                osc.start(); osc2.start(); osc.stop(audioCtx.currentTime + 0.6); osc2.stop(audioCtx.currentTime + 0.6);
+            } else if (type === 'success') {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(523.25, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(1046.50, audioCtx.currentTime + 0.1); 
+                gain.gain.setValueAtTime(0.3, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3); 
+                osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+            } else if (type === 'error') {
+                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.2);
+                gain.gain.setValueAtTime(0.3, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.2);
+            } else if (type === 'unlock') {
+                osc.type = 'triangle'; osc.frequency.setValueAtTime(440, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.2); osc.frequency.exponentialRampToValueAtTime(1760, audioCtx.currentTime + 0.4); 
+                gain.gain.setValueAtTime(0, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.1); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.5);
+            } else if (type === 'telemetryStart') {
+                osc.type = 'square'; osc.frequency.setValueAtTime(1200, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(3000, audioCtx.currentTime + 0.08);
+                gain.gain.setValueAtTime(0.0, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0.05, audioCtx.currentTime + 0.02); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.08);
+            } else if (type === 'telemetryEnd') {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(800, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(200, audioCtx.currentTime + 0.15);
+                gain.gain.setValueAtTime(0.0, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0.05, audioCtx.currentTime + 0.02); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.15);
+            }
+        }
+
+        async function playTTS(text) {
+            stopAudio(); playSFX('telemetryStart');
+            const cleanText = text.replace(/\[.*\]/g, ''); 
+            if (!GameData.API_KEY) { fallbackTTS(cleanText); return; } 
+            try {
+                const promptDirective = "Aja como o GrafenoMinho, uma inteligência artificial futurista de suporte num laboratório científico. Fale o seguinte texto com tom profissional, amigável e um ligeiro toque robótico: " + cleanText;
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${GameData.API_KEY}`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: promptDirective }] }], generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Zephyr" } } } } })
+                });
+                if (!response.ok) throw new Error('API TTS falhou');
+                const data = await response.json(); const inlineData = data.candidates?.[0]?.content?.parts?.[0]?.inlineData;
+                if (inlineData && inlineData.data) {
+                    const binaryString = window.atob(inlineData.data); const bytes = new Uint8Array(binaryString.length);
+                    for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
+                    let sampleRate = 24000; const rateMatch = inlineData.mimeType.match(/rate=(\d+)/); if (rateMatch) sampleRate = parseInt(rateMatch[1]);
+                    const wavBytes = pcmToWav(bytes, sampleRate); const blob = new Blob([wavBytes], { type: 'audio/wav' }); const url = URL.createObjectURL(blob);
+                    currentAudio = new Audio(url); currentAudio.play(); currentAudio.onended = () => { playSFX('telemetryEnd'); };
+                } else { fallbackTTS(cleanText); }
+            } catch (error) { fallbackTTS(cleanText); }
+        }
+
+        function fallbackTTS(text) {
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(text); utterance.lang = 'pt-PT'; utterance.rate = 1.05; utterance.pitch = 0.8; 
+                utterance.onend = () => { playSFX('telemetryEnd'); }; window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        function stopAudio() {
+            if (currentAudio) { currentAudio.pause(); currentAudio.currentTime = 0; currentAudio = null; }
+            if ('speechSynthesis' in window) { window.speechSynthesis.cancel(); }
+        }
+
+        function pcmToWav(pcmData, sampleRate) {
+            const numChannels = 1; const bitsPerSample = 16; const byteRate = sampleRate * numChannels * (bitsPerSample / 8); const blockAlign = numChannels * (bitsPerSample / 8);
+            const wavData = new Uint8Array(44 + pcmData.length); const view = new DataView(wavData.buffer);
+            function writeStr(view, offset, str) { for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i)); }
+            writeStr(view, 0, 'RIFF'); view.setUint32(4, 36 + pcmData.length, true); writeStr(view, 8, 'WAVE'); writeStr(view, 12, 'fmt '); view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true); view.setUint16(22, numChannels, true); view.setUint32(24, sampleRate, true); view.setUint32(28, byteRate, true); view.setUint16(32, blockAlign, true); view.setUint16(34, bitsPerSample, true);
+            writeStr(view, 36, 'data'); view.setUint32(40, pcmData.length, true); wavData.set(pcmData, 44); return wavData;
+        }
+
+        return { init, startAmbient, changeAmbient, playSFX, playTTS, stopAudio };
+    })();
+
+    /** * ==========================================================
+     * 📁 MÓDULO VIRTUAL: UI Controller
+     * ==========================================================
+     */
+    const UI = (function() {
+        let typeInterval = null;
+
+        function updateProgressionInfo() {
+            document.getElementById('ui-level').innerText = AppState.user.level;
+            const currentLevelXP = GameData.XP_LEVELS[AppState.user.level - 1] || 0; 
+            const nextLevelXP = GameData.XP_LEVELS[AppState.user.level] || GameData.XP_LEVELS[GameData.XP_LEVELS.length - 1]; 
+            let xpRequired = nextLevelXP - currentLevelXP; let xpEarnedInLevel = AppState.user.xp - currentLevelXP;
+            if (AppState.user.level >= GameData.XP_LEVELS.length) { xpRequired = 1; xpEarnedInLevel = 1; } 
+            const percent = Math.min(100, Math.max(0, (xpEarnedInLevel / xpRequired) * 100));
+            
+            document.getElementById('ui-xp').innerText = `${AppState.user.xp} / ${nextLevelXP === AppState.user.xp && AppState.user.level === GameData.XP_LEVELS.length ? 'MAX' : nextLevelXP} XP`;
+            document.getElementById('ui-xp-bar').style.width = `${percent}%`;
+
+            const badgesContainer = document.getElementById('ui-badges-mini'); badgesContainer.innerHTML = '';
+            AppState.user.badges.forEach(bId => {
+                const b = GameData.BADGE_DATA[bId];
+                if (b) { 
+                    const span = document.createElement('span'); 
+                    span.className = 'text-sm badge-icon'; span.style.color = b.color; 
+                    span.innerText = b.icon; span.title = b.name; 
+                    badgesContainer.appendChild(span); 
+                }
+            });
+        }
+
+        function showNotification(title, desc, colorHex) {
+            const container = document.getElementById('notif-container'); const notif = document.createElement('div');
+            notif.className = 'glass-panel p-3 border-l-4 rounded-r-lg notif-enter flex flex-col gap-1 shadow-lg';
+            notif.style.borderLeftColor = colorHex; notif.style.backgroundColor = 'rgba(2, 5, 10, 0.85)';
+            notif.innerHTML = `<span class="text-sm font-bold sci-fi-text tracking-widest drop-shadow-[0_0_5px_currentColor]" style="color: ${colorHex}">${title}</span><span class="text-xs text-gray-300">${desc}</span>`;
+            container.appendChild(notif);
+            setTimeout(() => { notif.classList.replace('notif-enter', 'notif-exit'); setTimeout(() => { if (notif.parentNode) notif.parentNode.removeChild(notif); }, 500); }, 4000);
+        }
+
+        function updateRoomHeader() {
+            const roomData = GameData.scriptData[AppState.currentRoom];
+            document.getElementById('room-indicator').innerText = roomData.title + " | " + roomData.roomName;
+            document.getElementById('btn-prev').disabled = AppState.currentRoom === 0;
+            
+            const btnNext = document.getElementById('btn-next');
+            btnNext.classList.remove('hidden');
+            
+            // Check Module completion strictly from AppState
+            const isModuleLocked = roomData.requiresModule && roomData.moduleId && !AppState.modules[roomData.moduleId].completed;
+
+            if (isModuleLocked) {
+                btnNext.disabled = true; btnNext.innerHTML = '🔒 BLOQUEADO';
+            } else {
+                btnNext.disabled = false; btnNext.innerHTML = 'AVANÇAR ▶';
+            }
+            
+            ['btn-quiz', 'btn-drone', 'btn-3dlab', 'btn-cert'].forEach(id => document.getElementById(id).classList.add('hidden'));
+            
+            if (AppState.currentRoom === 6) document.getElementById('btn-quiz').classList.remove('hidden');
+            else if (AppState.currentRoom === 7) document.getElementById('btn-drone').classList.remove('hidden');
+            else if (AppState.currentRoom === 8) document.getElementById('btn-3dlab').classList.remove('hidden');
+            else if (AppState.currentRoom === 9) { btnNext.classList.add('hidden'); document.getElementById('btn-cert').classList.remove('hidden'); }
+        }
+
+        function updateAIStatus(state, customMsg = null) {
+            const statusEl = document.getElementById('ai-status'); const avatarEl = document.getElementById('ai-avatar-container');
+            if (state === 'speaking') {
+                statusEl.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_8px_#00ffff]"></span> A TRANSMITIR DADOS...';
+                statusEl.className = 'status-badge text-[10px] md:text-xs font-bold text-cyan-400 sci-fi-text tracking-widest bg-black/90 px-3 py-1 rounded-t-lg border-t border-l border-r border-cyan-800 flex items-center gap-2 shadow-[0_-5px_15px_rgba(0,255,255,0.2)]';
+                avatarEl.classList.add('is-speaking');
+            } else if (state === 'waiting') {
+                statusEl.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse shadow-[0_0_8px_#00ff00]"></span> ${customMsg || 'AGUARDAR INTERAÇÃO'}`;
+                statusEl.className = 'status-badge text-[10px] md:text-xs font-bold text-green-400 sci-fi-text tracking-widest bg-black/90 px-3 py-1 rounded-t-lg border-t border-l border-r border-green-800 flex items-center gap-2 drop-shadow-[0_0_5px_currentColor]';
+                avatarEl.classList.remove('is-speaking');
+            } else if (state === 'processing') {
+                statusEl.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-bounce shadow-[0_0_8px_#ffeb3b]"></span> A PROCESSAR...';
+                statusEl.className = 'status-badge text-[10px] md:text-xs font-bold text-yellow-400 sci-fi-text tracking-widest bg-black/90 px-3 py-1 rounded-t-lg border-t border-l border-r border-yellow-800 flex items-center gap-2 drop-shadow-[0_0_5px_currentColor]';
+            }
+        }
+
+        function typeText(text, prefix = '', onComplete) {
+            if (typeInterval) clearInterval(typeInterval);
+            const el = document.getElementById('nexa-text'); 
+            el.innerHTML = prefix;
+            updateAIStatus('speaking');
+            
+            let i = 0;
+            typeInterval = setInterval(() => {
+                if (text && text.charAt) el.innerHTML += text.charAt(i);
+                i++;
+                if (i >= text.length) {
+                    clearInterval(typeInterval);
+                    if (onComplete) onComplete();
+                }
+            }, 30);
+        }
+
+        function clearText() {
+            if (typeInterval) clearInterval(typeInterval);
+            document.getElementById('nexa-text').innerHTML = '';
+        }
+
+        function highlightAction(targetId) {
+            document.querySelectorAll('.suggested-action').forEach(el => el.classList.remove('suggested-action'));
+            if (targetId) {
+                const btn = document.getElementById(targetId);
+                if (btn && !btn.classList.contains('hidden') && !btn.disabled) btn.classList.add('suggested-action');
+            }
+        }
+
+        function clearHighlights() { document.querySelectorAll('.suggested-action').forEach(el => el.classList.remove('suggested-action')); }
+
+        function fadeTransition(fadeIn, callback) {
+            const overlay = document.getElementById('transition-overlay');
+            const uis = document.querySelectorAll('.ui-transition');
+            if (fadeIn) {
+                overlay.style.opacity = '1'; uis.forEach(el => el.classList.add('ui-hidden'));
+                setTimeout(callback, 800);
+            } else {
+                overlay.style.opacity = '0'; uis.forEach(el => el.classList.remove('ui-hidden'));
+                setTimeout(callback, 600);
+            }
+        }
+
+        function renderCertificate() {
+            const modal = document.getElementById('center-modal'); modal.classList.remove('hidden');
+            let date = new Date().toLocaleDateString('pt-PT');
+            let badgesHtml = '';
+            AppState.user.badges.forEach(bId => {
+                const b = GameData.BADGE_DATA[bId];
+                if (b) badgesHtml += `<div class="flex flex-col items-center p-2 bg-cyan-900/20 rounded border border-cyan-800"><span class="text-3xl badge-icon mb-1" style="color: ${b.color}">${b.icon}</span><span class="text-[10px] font-bold text-gray-300 uppercase">${b.name}</span></div>`;
+            });
+            if (badgesHtml === '') badgesHtml = '<span class="text-gray-500 text-sm">Registo de simulação em branco.</span>';
+
+            modal.innerHTML = `
+                <div class="glass-panel p-8 md:p-10 rounded-xl border-4 border-cyan-400 w-full max-w-4xl text-center relative overflow-hidden flex flex-col md:flex-row gap-8 shadow-[0_0_50px_rgba(0,255,255,0.2)]">
+                    <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+                    <div class="relative z-10 flex-1 flex flex-col justify-center">
+                        <h3 class="text-cyan-400 tracking-[0.3em] text-xs font-bold mb-2 sci-fi-text">NEXUMHD - HUMANIDADES DIGITAIS UMINHO</h3>
+                        <h1 class="text-3xl md:text-5xl font-bold text-white mb-2 sci-fi-text drop-shadow-lg">CERTIFICADO OFICIAL</h1>
+                        <h2 class="text-xl text-cyan-200 mb-6 font-light tracking-widest">EXPLORADOR DO GRAFENO</h2>
+                        <p class="text-sm md:text-base text-gray-300 mb-6 mx-auto leading-relaxed text-justify">Certifica-se que o utilizador concluiu com distinção o treino e simulação no <strong class="text-cyan-300">Laboratório Virtual do Grafeno</strong>, demonstrando proficiência nas propriedades e aplicações da nanotecnologia do carbono.</p>
+                        <div class="flex justify-between items-end border-t border-cyan-800 pt-6 mt-auto"><div class="text-left"><p class="text-cyan-500 text-[10px] uppercase tracking-widest">Avaliador</p><p class="font-bold text-lg text-white">GrafenoMinho</p></div><div class="text-right"><p class="text-cyan-500 text-[10px] uppercase tracking-widest">Data Estelar</p><p class="font-bold sci-fi-text text-lg text-cyan-100">${date}</p></div></div>
+                    </div>
+                    <div class="relative z-10 w-full md:w-64 bg-black/60 rounded-lg border border-cyan-800/50 p-4 flex flex-col items-center justify-center shadow-inner">
+                        <h4 class="text-cyan-500 text-xs font-bold tracking-widest uppercase mb-4 w-full text-center border-b border-cyan-900 pb-2">Desempenho</h4>
+                        <div class="w-24 h-24 rounded-full border-4 border-cyan-400 flex flex-col items-center justify-center mb-4 shadow-[0_0_20px_#00ffff]"><span class="text-xs text-cyan-200 sci-fi-text">NÍVEL</span><span class="text-4xl font-bold text-white sci-fi-text drop-shadow-[0_0_8px_#ffffff]">${AppState.user.level}</span></div>
+                        <p class="text-sm text-cyan-300 font-bold tracking-wider mb-6 sci-fi-text drop-shadow-[0_0_5px_currentColor]">${AppState.user.xp} XP OBTIDOS</p>
+                        <h5 class="text-gray-400 text-[10px] uppercase tracking-widest mb-2 w-full text-left">Condecorações:</h5><div class="grid grid-cols-2 gap-2 w-full">${badgesHtml}</div>
+                    </div>
+                    <button onclick="document.getElementById('center-modal').classList.add('hidden')" class="absolute top-4 right-4 text-cyan-500 hover:text-white hover:drop-shadow-[0_0_8px_#ffffff] transition-all z-20"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+                </div>`;
+        }
+
+        return { updateProgressionInfo, showNotification, updateRoomHeader, updateAIStatus, typeText, clearText, highlightAction, clearHighlights, fadeTransition, renderCertificate };
+    })();
+
+    /** * ==========================================================
+     * 📁 MÓDULO VIRTUAL: Progression
+     * ==========================================================
+     */
+    const Progression = (function() {
+        function addXP(amount, reason) {
+            AppState.user.xp += amount; 
+            UI.showNotification(`+${amount} XP`, reason, '#00ffff');
+            AudioSys.playSFX('xp'); 
+            _checkLevelUp(); 
+            UI.updateProgressionInfo();
+            Storage.saveState(); // <-- Gravar após ganho
+        }
+
+        function _checkLevelUp() {
+            let newLevel = 1; 
+            for (let i = 0; i < GameData.XP_LEVELS.length; i++) { if (AppState.user.xp >= GameData.XP_LEVELS[i]) newLevel = i + 1; }
+            if (newLevel > AppState.user.level) {
+                AppState.user.level = newLevel;
+                setTimeout(() => { 
+                    UI.showNotification(`NÍVEL ${newLevel}!`, 'Permissões aumentadas', '#00ff00'); 
+                    AudioSys.playSFX('levelUp'); 
+                }, 1000); 
+            }
+        }
+
+        function grantBadge(badgeId) {
+            if (!AppState.user.badges.includes(badgeId) && GameData.BADGE_DATA[badgeId]) {
+                AppState.user.badges.push(badgeId); const b = GameData.BADGE_DATA[badgeId];
+                setTimeout(() => { 
+                    UI.showNotification(`${b.icon} NOVO EMBLEMA`, b.name, b.color); 
+                    AudioSys.playSFX('levelUp'); 
+                    UI.updateProgressionInfo(); 
+                    Storage.saveState(); // <-- Gravar após badge
+                }, 1500);
+            }
+        }
+        return { addXP, grantBadge };
+    })();
+
+    /** * ==========================================================
+     * 📁 MÓDULO VIRTUAL: Engine (Three.js Isolation)
+     * ==========================================================
+     */
+    const Engine = (function() {
+        let scene, camera, renderer, particles, interactiveLattice, zone3Lattice, appsGroup;
+        let conductivityElectrons = [], holoPanels = [];
+        let chevronTexture, guidingLights;
+
+        function init() {
+            const container = document.getElementById('canvas-container');
+            scene = new THREE.Scene(); scene.background = new THREE.Color(0x010205); scene.fog = new THREE.FogExp2(0x010205, 0.015);
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000); camera.position.set(0, 1.5, 5);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
+            renderer.setSize(window.innerWidth, window.innerHeight); renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.outputEncoding = THREE.sRGBEncoding; renderer.physicallyCorrectLights = true;
+            container.appendChild(renderer.domElement);
+
+            scene.add(new THREE.AmbientLight(0xffffff, 0.1));
+            const light = new THREE.PointLight(0x00ffff, 5, 30); light.position.set(0, 3, 2); camera.add(light); scene.add(camera);
+
+            _createParticles(); _createGuidanceSystem(); _buildAllRooms();
+            window.addEventListener('resize', _onResize, false);
+            _setupInteraction();
+        }
+
+        function animate(time) {
+            requestAnimationFrame(animate); TWEEN.update(time);
+            
+            if (chevronTexture) chevronTexture.offset.y -= 0.005; 
+            if (guidingLights) guidingLights.material.opacity = 0.4 + Math.sin(time * 0.003) * 0.4; 
+
+            if (particles) {
+                particles.rotation.y += 0.0001;
+                const pos = particles.geometry.attributes.position.array; const vel = particles.geometry.attributes.velocity.array;
+                for (let i = 0; i < pos.length / 3; i++) {
+                    pos[i * 3 + 1] += vel[i]; if (pos[i * 3 + 1] > 15) pos[i * 3 + 1] = -10;
+                }
+                particles.geometry.attributes.position.needsUpdate = true;
+            }
+
+            holoPanels.forEach(p => { if (p && p.mesh) p.mesh.position.y = p.basePosY + Math.sin((time * 0.002) + p.randomOffset) * 0.1; });
+            
+            const rec = scene.getObjectByName("receptionRoom");
+            if (rec) {
+                const av = rec.getObjectByName("grafenoMinhoAvatar");
+                if (av) { av.position.y = 1.5 + Math.sin(time * 0.002) * 0.2; av.children[0].rotation.y += 0.01; av.children[0].rotation.x += 0.005;
+                    if (av.getObjectByName("ring1")) av.getObjectByName("ring1").rotation.z += 0.02; if (av.getObjectByName("ring2")) av.getObjectByName("ring2").rotation.x += 0.015; }
+            }
+
+            if (interactiveLattice && AppState.currentRoom === 1 && !AppState.flags.isDraggingLattice) { interactiveLattice.rotation.y += 0.002; interactiveLattice.rotation.x += (Math.PI / 6 - interactiveLattice.rotation.x) * 0.05; }
+            if (zone3Lattice && AppState.currentRoom === 2 && !AppState.flags.isDraggingLattice) { zone3Lattice.rotation.y += 0.003; zone3Lattice.rotation.x = Math.sin(time * 0.001) * 0.1; }
+
+            if (AppState.currentRoom === 3) {
+                const z4 = scene.getObjectByName("zone4Group");
+                if(z4) { conductivityElectrons.forEach(el => { el.userData.angle += 0.05; el.position.x = Math.cos(el.userData.angle) * 0.8; el.position.y = Math.sin(el.userData.angle) * 0.8; });
+                    const screen = z4.getObjectByName("flexScreen"); if (screen) { screen.rotation.y += 0.01; screen.scale.x = 1 + Math.sin(time * 0.002) * 0.1; } }
+            }
+            if (AppState.currentRoom === 4) {
+                const prod = scene.getObjectByName("productionRoom");
+                if (prod) prod.children.forEach(est => est.children.forEach(m => { if (m.userData.isTapeGroup) m.position.y = 0.5 + Math.sin(time * 0.002) * 0.3; if (m.userData.isCVDBurn) m.material.opacity = 0.3 + Math.sin(time * 0.005) * 0.2; if (m.userData.isCVDGraphene) m.material.opacity = 0.4 + Math.sin(time * 0.002) * 0.4; }));
+            }
+            if (appsGroup) appsGroup.rotation.y -= 0.001;
+            scene.children.forEach(c => { if (c.name === "terminalRoom") c.children.forEach(m => { if (m.userData.isDataCore) { m.rotation.y += 0.01; m.rotation.x += 0.005; }}); });
+            renderer.render(scene, camera);
+        }
+
+        function setCameraZ(z) { camera.position.z = z; }
+
+        function triggerRoomAnimation(room, diagIndex) {
+            if (room === 1) {
+                const zone2 = scene.getObjectByName("zone2Group");
+                if (zone2) {
+                    const graphite = zone2.getObjectByName("graphiteGroup"); const graphene = graphite.getObjectByName("grapheneLayer");
+                    const macroLabel = zone2.getObjectByName("macroLabel"); const nanoLabel = zone2.getObjectByName("nanoLabel");
+                    if (diagIndex === 0 || diagIndex === 1) {
+                        new TWEEN.Tween(graphene.position).to({ y: 3 * 0.4 }, 1000).start(); new TWEEN.Tween(graphite.scale).to({ x: 1, y: 1, z: 1 }, 1000).start();
+                        new TWEEN.Tween(macroLabel.material).to({ opacity: 1 }, 500).start(); new TWEEN.Tween(nanoLabel.material).to({ opacity: 0 }, 500).start();
+                    } else if (diagIndex === 2) {
+                        new TWEEN.Tween(graphene.position).to({ y: 3.5 }, 2500).easing(TWEEN.Easing.Quadratic.Out).start(); new TWEEN.Tween(graphite.scale).to({ x: 1.6, y: 1.6, z: 1.6 }, 2500).easing(TWEEN.Easing.Quadratic.Out).start();
+                        new TWEEN.Tween(macroLabel.material).to({ opacity: 0 }, 500).start(); new TWEEN.Tween(nanoLabel.material).to({ opacity: 1 }, 1000).start();
+                    }
+                }
+            }
+        }
+
+        function _onResize() { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); }
+        function _setupInteraction() {
+            let prev = {x:0, y:0};
+            const start = (x,y) => { AppState.flags.isDraggingLattice = true; prev = {x,y}; Flow.onStructureInteracted(); };
+            const move = (x,y) => { if(AppState.flags.isDraggingLattice){ const dX = x - prev.x; const dY = y - prev.y; let act = AppState.currentRoom===1?interactiveLattice:(AppState.currentRoom===2?zone3Lattice:null); if(act){ act.rotation.y += dX*0.005; act.rotation.x += dY*0.005; } prev={x,y}; } };
+            const end = () => AppState.flags.isDraggingLattice = false;
+            renderer.domElement.addEventListener('mousedown', e => start(e.clientX, e.clientY)); renderer.domElement.addEventListener('mousemove', e => move(e.clientX, e.clientY)); renderer.domElement.addEventListener('mouseup', end); renderer.domElement.addEventListener('mouseleave', end);
+            renderer.domElement.addEventListener('touchstart', e => start(e.touches[0].clientX, e.touches[0].clientY)); renderer.domElement.addEventListener('touchmove', e => move(e.touches[0].clientX, e.touches[0].clientY)); renderer.domElement.addEventListener('touchend', end);
+        }
+
+        function _createHoloPanel(text, w, h, color='#00ffff') {
+            const canvas = document.createElement('canvas'); canvas.width = 512; canvas.height = 256; const ctx = canvas.getContext('2d');
+            ctx.fillStyle = 'rgba(2, 5, 15, 0.85)'; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.strokeStyle = color; ctx.lineWidth = 8; ctx.shadowBlur = 20; ctx.shadowColor = color; ctx.strokeRect(4, 4, canvas.width-8, canvas.height-8); ctx.shadowBlur = 0;
+            for(let j=0; j<canvas.height; j+=6) { ctx.fillStyle = `rgba(0, 255, 255, 0.08)`; ctx.fillRect(0, j, canvas.width, 2); }
+            ctx.font = 'bold 42px Orbitron'; ctx.fillStyle = color; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.shadowBlur = 15; ctx.shadowColor = color; 
+            const lines = text.split('\n'); lines.forEach((line, i) => { ctx.fillText(line, canvas.width/2, canvas.height/2 - ((lines.length-1)*25) + (i*50)); });
+            const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(canvas), transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false }));
+            holoPanels.push({ mesh: mesh, basePosY: mesh.position.y, randomOffset: Math.random() * Math.PI * 2 }); return mesh;
+        }
+
+        function _buildAllRooms() {
+            const zSpacing = GameData.ROOM_Z_SPACING;
+            
+            // 0 - Rec
+            const r0 = new THREE.Group(); r0.name = "receptionRoom"; r0.add(_createHoloPanel("LABORATÓRIO\nDE GRAFENO", 6, 3, '#00ffff').translateY(3.5).translateZ(-6)); holoPanels[holoPanels.length-1].basePosY=3.5;
+            const aiG = new THREE.Group(); aiG.position.set(0, 1.5, -2); aiG.name = "grafenoMinhoAvatar"; aiG.add(new THREE.Mesh(new THREE.IcosahedronGeometry(0.5, 1), new THREE.MeshStandardMaterial({ color: 0x00ffff, wireframe: true, emissive: 0x00ffff, emissiveIntensity: 1.5 })));
+            const r1 = new THREE.Mesh(new THREE.RingGeometry(0.8, 0.85, 32), new THREE.MeshBasicMaterial({ color: 0x00ffff, side: THREE.DoubleSide, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending })); r1.rotation.x = Math.PI/2; r1.name = "ring1"; aiG.add(r1);
+            const r2 = new THREE.Mesh(new THREE.RingGeometry(1.0, 1.05, 32), new THREE.MeshBasicMaterial({ color: 0x0088ff, side: THREE.DoubleSide, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending })); r2.rotation.y = Math.PI/2; r2.name = "ring2"; aiG.add(r2);
+            aiG.add(new THREE.PointLight(0x00ffff, 3, 6)); r0.add(aiG);
+            const fl = new THREE.Mesh(new THREE.CircleGeometry(5, 32), new THREE.MeshStandardMaterial({ color: 0x001122, roughness: 0.2, metalness: 0.8 })); fl.rotation.x = -Math.PI/2; fl.position.y = -1; r0.add(fl); r0.add(new THREE.GridHelper(20, 20, 0x00ffff, 0x002244).translateY(-0.99)); scene.add(r0);
+
+            // 1 - Structure Macro
+            const r1G = new THREE.Group(); r1G.position.set(0, 0, -zSpacing - 5); r1G.name = "zone2Group"; const gr = new THREE.Group(); gr.name = "graphiteGroup";
+            for (let i = 0; i < 4; i++) { const l = new THREE.Group(); const aMat = new THREE.MeshStandardMaterial({ color: i===3?0x00ffff:0x555555, emissive: i===3?0x00ffff:0x555555, emissiveIntensity: 0.4 }); const hMat = new THREE.MeshBasicMaterial({color: i===3?0x00ffff:0x555555, side: THREE.DoubleSide, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending});
+                for (let r = -2; r <= 2; r++) { for (let c = -2; c <= 2; c++) { let x = c*Math.sqrt(3) + (r%2===0?0:Math.sqrt(3)/2); let z = r*2*0.75; 
+                    const a = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 16), aMat); a.position.set(x, 0, z); l.add(a); const h = new THREE.Mesh(new THREE.RingGeometry(0.9, 0.95, 6), hMat); h.rotation.x = Math.PI/2; h.rotation.z = Math.PI/6; h.position.set(x, 0, z); l.add(h); } }
+                l.position.y = i * 0.4; l.name = i===3?"grapheneLayer":`graphiteLayer${i}`; gr.add(l); }
+            gr.rotation.set(Math.PI/6, -Math.PI/4, 0); gr.position.y=1; gr.add(new THREE.PointLight(0x00ffff, 3, 10).translateY(3)); r1G.add(gr); interactiveLattice = gr; 
+            r1G.add(_createHoloPanel("GRAFITE (MACRO)", 3, 1, '#888888').translateY(3).translateX(-3)); holoPanels[holoPanels.length-1].basePosY=3; r1G.children[r1G.children.length-1].name="macroLabel";
+            r1G.add(_createHoloPanel("GRAFENO (NANO)", 3, 1, '#00ffff').translateY(3).translateX(3)); holoPanels[holoPanels.length-1].basePosY=3; r1G.children[r1G.children.length-1].name="nanoLabel"; r1G.children[r1G.children.length-1].material.opacity=0;
+            r1G.add(new THREE.GridHelper(20, 20, 0x00ffff, 0x002244).translateY(-1).translateZ(5)); scene.add(r1G);
+
+            // 2 - Structure Nano
+            const r2G = new THREE.Group(); r2G.position.set(0, 1.5, -zSpacing*2 - 5); r2G.name = "zone3Group"; zone3Lattice = new THREE.Group();
+            const aPos=[]; for (let r = -2; r <= 2; r++) { for (let c = -2; c <= 2; c++) { let x = c * Math.sqrt(3)*1.2 + (r % 2 === 0 ? 0 : Math.sqrt(3)*1.2 / 2); let y = r * 2.4 * 0.75;
+                for(let a=0; a<6; a++){ const pX = x + 1.2 * Math.cos((Math.PI/3)*a + (Math.PI/6)); const pY = y + 1.2 * Math.sin((Math.PI/3)*a + (Math.PI/6)); if(!aPos.some(p => Math.abs(p.x-pX)<0.1 && Math.abs(p.y-pY)<0.1)) aPos.push(new THREE.Vector3(pX, pY, 0)); } } }
+            aPos.forEach(p => { const a = new THREE.Mesh(new THREE.SphereGeometry(0.18, 32, 32), new THREE.MeshStandardMaterial({ color: 0x00ffff, emissive: 0x00ffff, emissiveIntensity: 0.6 })); a.position.copy(p); zone3Lattice.add(a); });
+            for(let i=0; i<aPos.length; i++){ for(let j=i+1; j<aPos.length; j++){ const d = aPos[i].distanceTo(aPos[j]); if(d>0.1 && d<1.44){ 
+                const b = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, d, 8), new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending })); b.position.copy(aPos[i]).lerp(aPos[j], 0.5); b.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), aPos[j].clone().sub(aPos[i]).normalize()); zone3Lattice.add(b); } } }
+            zone3Lattice.add(new THREE.PointLight(0x00ffff, 4, 15)); const lbl = _createHoloPanel("LIGAÇÃO sp²\nREDE 2D", 3, 1.5, '#00ffff'); lbl.position.set(0, 3.5, 0); holoPanels[holoPanels.length-1].basePosY=3.5; zone3Lattice.add(lbl); r2G.add(zone3Lattice); scene.add(r2G);
+
+            // 3 - Properties
+            const r3G = new THREE.Group(); r3G.position.set(0, 0, -zSpacing*3 - 5); r3G.name = "zone4Group";
+            const cg = new THREE.Group(); cg.position.set(-4, 1.5, 0); cg.add(new THREE.Mesh(new THREE.CylinderGeometry(1, 1.2, 0.2, 16), new THREE.MeshStandardMaterial({color: 0x222222})).translateY(-1));
+            cg.add(new THREE.Mesh(new THREE.TorusGeometry(0.8, 0.05, 8, 30), new THREE.MeshBasicMaterial({color: 0xffff00, wireframe: true, blending: THREE.AdditiveBlending})));
+            for(let i=0; i<5; i++){ const e = new THREE.Mesh(new THREE.SphereGeometry(0.15, 8, 8), new THREE.MeshBasicMaterial({color: 0xffff00, blending: THREE.AdditiveBlending})); e.userData={angle:(Math.PI*2/5)*i}; conductivityElectrons.push(e); cg.add(e); }
+            const pcg = _createHoloPanel("CONDUTIVIDADE\nELÉTRICA", 2.2, 1.2, '#ffff00'); pcg.position.set(0, 2, 0); holoPanels[holoPanels.length-1].basePosY=2; cg.add(pcg); r3G.add(cg);
+            const tg = new THREE.Group(); tg.position.set(0, 1.5, 0); tg.add(new THREE.Mesh(new THREE.CylinderGeometry(1, 1.2, 0.2, 16), new THREE.MeshStandardMaterial({color: 0x222222})).translateY(-1));
+            const scr = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 2, 32, 1, true, 0, Math.PI), new THREE.MeshBasicMaterial({color: 0x00ffff, transparent: true, opacity: 0.5, side: THREE.DoubleSide, blending: THREE.AdditiveBlending})); scr.rotation.x = Math.PI/8; scr.name="flexScreen"; tg.add(scr);
+            const ptg = _createHoloPanel("TRANSPARÊNCIA\n& FLEXIBILIDADE", 2.5, 1.2, '#00ffff'); ptg.position.set(0, 2.5, 0); holoPanels[holoPanels.length-1].basePosY=2.5; tg.add(ptg); r3G.add(tg);
+            const rg = new THREE.Group(); rg.position.set(4, 1.5, 0); rg.add(new THREE.Mesh(new THREE.CylinderGeometry(1, 1.2, 0.2, 16), new THREE.MeshStandardMaterial({color: 0x222222})).translateY(-1));
+            const nt = new THREE.Mesh(new THREE.PlaneGeometry(2, 2, 10, 10), new THREE.MeshBasicMaterial({color: 0xff0055, wireframe: true, blending: THREE.AdditiveBlending})); nt.rotation.x = -Math.PI/2; rg.add(nt);
+            const wt = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8), new THREE.MeshStandardMaterial({color: 0xaaaaaa, metalness: 0.9, roughness: 0.1})); wt.position.y = 0.4; rg.add(wt);
+            const prg = _createHoloPanel("RESISTÊNCIA\n200x AÇO", 2.2, 1.2, '#ff0055'); prg.position.set(0, 2, 0); holoPanels[holoPanels.length-1].basePosY=2; rg.add(prg); r3G.add(rg); scene.add(r3G);
+
+            // 4 - Prod
+            const r4G = new THREE.Group(); r4G.position.set(0, 1.5, -zSpacing*4 - 4); r4G.name = "productionRoom"; 
+            const eg = new THREE.Group(); eg.position.set(-3.5, 0, 0); eg.add(new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.4, 1.5), new THREE.MeshStandardMaterial({ color: 0x222222 })));
+            const tpg = new THREE.Group(); tpg.position.set(0, 0.5, 0); tpg.userData.isTapeGroup = true; const tp = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 3), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.4, side: THREE.DoubleSide, blending: THREE.AdditiveBlending })); tp.rotation.x = Math.PI/2; tpg.add(tp);
+            const pg = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.4), new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.8, side: THREE.DoubleSide, blending: THREE.AdditiveBlending })); pg.rotation.x = Math.PI/2; pg.position.y = -0.01; tpg.add(pg); eg.add(tpg);
+            const pe = _createHoloPanel("ESFOLIAÇÃO MECÂNICA", 3, 1.4, '#00ffff'); pe.position.set(0, 2.5, 0); holoPanels[holoPanels.length-1].basePosY=2.5; eg.add(pe); 
+            const ped = _createHoloPanel("PESQUISA CIENTÍFICA", 3, 1.2, '#00ffff'); ped.position.set(0, -1.5, 0); holoPanels[holoPanels.length-1].basePosY=-1.5; eg.add(ped);
+            const cdg = new THREE.Group(); cdg.position.set(3.5, 0, 0); const fu = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 3, 16, 1, true), new THREE.MeshStandardMaterial({ color: 0x4488ff, wireframe: true, emissive: 0x0044aa, transparent: true, opacity: 0.5 })); fu.rotation.z = Math.PI/2; cdg.add(fu);
+            const cf = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 1.5), new THREE.MeshStandardMaterial({ color: 0xb87333 })); cf.rotation.x = -Math.PI/2; cf.position.y = -0.2; cdg.add(cf);
+            const cgph = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 1.5), new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.9, side: THREE.DoubleSide, blending: THREE.AdditiveBlending })); cgph.rotation.x = -Math.PI/2; cgph.position.y = -0.19; cgph.userData.isCVDGraphene=true; cdg.add(cgph);
+            const cr = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 2.8, 16), new THREE.MeshBasicMaterial({ color: 0xff4400, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending })); cr.rotation.z = Math.PI/2; cr.userData.isCVDBurn=true; cdg.add(cr);
+            const pcd = _createHoloPanel("CVD - DEPOSIÇÃO VAPOR", 3, 1.4, '#ff6600'); pcd.position.set(0, 2.5, 0); holoPanels[holoPanels.length-1].basePosY=2.5; cdg.add(pcd); 
+            const pcdd = _createHoloPanel("LARGA ESCALA INDÚSTRIA", 3, 1.2, '#00ffff'); pcdd.position.set(0, -1.5, 0); holoPanels[holoPanels.length-1].basePosY=-1.5; cdg.add(pcdd);
+            r4G.add(eg); r4G.add(cdg); scene.add(r4G);
+
+            // 5 - Apps
+            appsGroup = new THREE.Group(); appsGroup.position.set(0, 1.5, -zSpacing*5 - 5);
+            appsGroup.add(new THREE.Mesh(new THREE.IcosahedronGeometry(1.5, 1), new THREE.MeshBasicMaterial({ color: 0x00ffff, wireframe: true, transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending })));
+            [{t:"🏥 SAÚDE",a:0,y:1.5,c:'#00ffcc'}, {t:"🔋 ENERGIA",a:(Math.PI*2)/5,y:0.5,c:'#ffcc00'}, {t:"📱 TECNOLOGIA",a:(Math.PI*2)/5*2,y:-0.5,c:'#00ccff'}, {t:"✈️ INDÚSTRIA",a:(Math.PI*2)/5*3,y:0.5,c:'#ff5500'}, {t:"🛠️ METALURGIA",a:(Math.PI*2)/5*4,y:1.5,c:'#aa55ff'}].forEach(ap => { 
+                const pn = _createHoloPanel(ap.t, 3.2, 1.4, ap.c); pn.position.set(Math.cos(ap.a)*3.8, ap.y, Math.sin(ap.a)*3.8); holoPanels[holoPanels.length-1].basePosY = ap.y; pn.lookAt(0, ap.y, 0); appsGroup.add(pn); 
+            }); scene.add(appsGroup);
+
+            // 6, 7, 8 - Terminais
+            [ {z:-6, t:"QUIZ\nNETWORK", c:0xa855f7}, {z:-7, t:"DRONE\nUPLINK", c:0xf97316}, {z:-8, t:"VR 3D\nSANDBOX", c:0xec4899} ].forEach(term => {
+                const grp = new THREE.Group(); grp.position.set(0, 0, zSpacing*term.z - 4); grp.name = "terminalRoom";
+                grp.add(new THREE.Mesh(new THREE.CylinderGeometry(1.5, 2, 0.5, 8), new THREE.MeshStandardMaterial({ color: 0x111111 })).translateY(-0.75));
+                const co = new THREE.Mesh(new THREE.OctahedronGeometry(0.8, 0), new THREE.MeshStandardMaterial({ color: term.c, emissive: term.c, emissiveIntensity: 1.2, wireframe: true })); co.position.y = 1; co.userData.isDataCore = true; grp.add(co);
+                grp.add(new THREE.PointLight(term.c, 4, 12).translateY(1));
+                const pl = _createHoloPanel(term.t, 3.2, 1.6, '#'+term.c.toString(16).padStart(6, '0')); pl.position.set(0, 2.8, 0); holoPanels[holoPanels.length-1].basePosY=2.8; grp.add(pl); scene.add(grp);
+            });
+
+            // 9 - Fim
+            const r9 = new THREE.Group(); r9.position.set(0, 0, -zSpacing*9 - 4);
+            r9.add(new THREE.Mesh(new THREE.CylinderGeometry(2, 2.5, 0.5, 32), new THREE.MeshStandardMaterial({ color: 0x00ff00, emissive: 0x008800 })).translateY(-0.75));
+            r9.add(new THREE.PointLight(0x00ff00, 4, 15).translateY(2));
+            const p9 = _createHoloPanel("MISSÃO\nCUMPRIDA", 4, 2, '#00ff00'); p9.position.set(0, 2, 0); holoPanels[holoPanels.length-1].basePosY=2; r9.add(p9); scene.add(r9);
+        }
+
+        function _createParticles() {
+            const pc = 1800; const pos = new Float32Array(pc * 3); const vel = new Float32Array(pc); 
+            for (let i = 0; i < pc; i++) { pos[i*3]=(Math.random()-0.5)*40; pos[i*3+1]=(Math.random()-0.5)*25; pos[i*3+2]=Math.random()*-550+20; vel[i]=0.01+(Math.random()*0.02); }
+            const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('velocity', new THREE.BufferAttribute(vel, 1));
+            particles = new THREE.Points(geo, new THREE.PointsMaterial({color: 0x00ffff, size: 0.06, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false})); scene.add(particles);
+        }
+
+        function _createGuidanceSystem() {
+            const cvs = document.createElement('canvas'); cvs.width=128; cvs.height=256; const ctx = cvs.getContext('2d');
+            ctx.strokeStyle='rgba(0,255,255,0.3)'; ctx.lineWidth=8; ctx.shadowBlur=15; ctx.shadowColor='#00ffff'; ctx.lineCap='round'; ctx.lineJoin='round';
+            ctx.beginPath(); ctx.moveTo(30,160); ctx.lineTo(64,90); ctx.lineTo(98,160); ctx.stroke();
+            ctx.strokeStyle='rgba(255,255,255,0.8)'; ctx.lineWidth=3; ctx.stroke();
+            chevronTexture = new THREE.CanvasTexture(cvs); chevronTexture.wrapS=THREE.RepeatWrapping; chevronTexture.wrapT=THREE.RepeatWrapping; chevronTexture.repeat.set(1, 100); 
+            const pMesh = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 600), new THREE.MeshBasicMaterial({map: chevronTexture, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide})); pMesh.rotation.x = -Math.PI/2; pMesh.position.set(0, -0.98, -290); scene.add(pMesh);
+            
+            const dp = new Float32Array(150*6); for(let i=0; i<150; i++) { const z=10-(i*4); dp[i*6]=-1.5; dp[i*6+1]=-0.96; dp[i*6+2]=z; dp[i*6+3]=1.5; dp[i*6+4]=-0.96; dp[i*6+5]=z; }
+            const dGeo = new THREE.BufferGeometry(); dGeo.setAttribute('position', new THREE.BufferAttribute(dp, 3));
+            guidingLights = new THREE.Points(dGeo, new THREE.PointsMaterial({color: 0x00ffff, size: 0.12, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false})); scene.add(guidingLights);
+        }
+
+        return { init, animate, setCameraZ, triggerRoomAnimation };
+    })();
+
+    /** * ==========================================================
+     * 📁 MÓDULO VIRTUAL: Flow (Game Dialogues & Events)
+     * ==========================================================
+     */
+    const Flow = (function() {
+        let dialogueTimeout = null;
+
+        function stopDialogue() {
+            if (dialogueTimeout) clearTimeout(dialogueTimeout);
+        }
+
+        function _getActiveTargetBtn(roomData) {
+            if (roomData.requiresModule && roomData.moduleId && AppState.modules[roomData.moduleId].completed) {
+                return 'btn-next';
+            }
+            return roomData.targetBtn;
+        }
+
+        function playCurrentDialogue() {
+            if (AppState.flags.isInterrupting) return;
+            const roomData = GameData.scriptData[AppState.currentRoom];
+            if (!roomData || !roomData.dialogues[AppState.diagIndex]) return;
+
+            const text = roomData.dialogues[AppState.diagIndex];
+            Engine.triggerRoomAnimation(AppState.currentRoom, AppState.diagIndex);
+            UI.clearHighlights();
+
+            UI.typeText(text, '', () => {
+                AudioSys.playTTS(text);
+                
+                const isLastDialogue = AppState.diagIndex >= roomData.dialogues.length - 1;
+                if (isLastDialogue) {
+                    UI.updateAIStatus('waiting', roomData.actionPrompt);
+                    UI.highlightAction(_getActiveTargetBtn(roomData));
+                } else {
+                    UI.updateAIStatus('waiting', 'AGUARDAR TRANSIÇÃO');
+                    dialogueTimeout = setTimeout(() => {
+                        AppState.diagIndex++;
+                        playCurrentDialogue();
+                    }, 6000);
+                }
+            });
+        }
+
+        function interruptAndSpeak(text) {
+            AppState.flags.isInterrupting = true;
+            stopDialogue();
+            UI.clearText();
+            UI.clearHighlights();
+            
+            AudioSys.playTTS(text);
+            UI.typeText(text, '<span class="text-green-300 font-bold drop-shadow-[0_0_5px_currentColor]">[OBSERVAÇÃO DO SISTEMA]</span> <br>', () => {
+                UI.updateAIStatus('waiting', 'ANÁLISE CONCLUÍDA');
+                
+                const roomData = GameData.scriptData[AppState.currentRoom];
+                UI.highlightAction(_getActiveTargetBtn(roomData));
+                
+                setTimeout(() => {
+                    AppState.flags.isInterrupting = false;
+                    if (roomData && !text.includes("desbloquead") && !text.includes("levantada") && !text.includes("completa")) {
+                        playCurrentDialogue(); // Resume
+                    }
+                }, 5000);
+            });
+        }
+
+        function onStructureInteracted() {
+            if (!AppState.flags.interactedStructure && !AppState.flags.isInterrupting && (AppState.currentRoom === 1 || AppState.currentRoom === 2)) {
+                AppState.flags.interactedStructure = true;
+                Progression.addXP(15, 'Análise Estrutural 3D'); 
+                Progression.grantBadge('curioso');
+                interruptAndSpeak("Excelente iniciativa! Ao manipular a estrutura holográfica, é visível que as ligações atómicas mantêm uma estabilidade perfeita na sua arquitetura hexagonal.");
+            }
+        }
+
+        function repeatDialogue() {
+            if (AppState.flags.isInterrupting) return; 
+            playCurrentDialogue();
+        }
+
+        return { stopDialogue, playCurrentDialogue, interruptAndSpeak, onStructureInteracted, repeatDialogue };
+    })();
+
+    /** * ==========================================================
+     * 📁 MÓDULO VIRTUAL: Navigation (Routing)
+     * ==========================================================
+     */
+    const Navigation = (function() {
+        function navigate(direction) {
+            if (AppState.flags.isInterrupting || AppState.flags.isNavigating) return; 
+            const newRoom = AppState.currentRoom + direction;
+            if (newRoom < 0 || newRoom >= GameData.scriptData.length) return;
+
+            AppState.flags.isNavigating = true;
+            
+            Flow.stopDialogue();
+            UI.clearHighlights(); 
+            AudioSys.stopAudio();
+            
+            UI.updateAIStatus('processing', 'A CALCULAR ROTA ESPACIAL...');
+            
+            UI.fadeTransition(true, () => {
+                AppState.currentRoom = newRoom; 
+                AppState.diagIndex = 0;
+                
+                _updateRoom();
+                Storage.saveState(); // <-- Gravar após mudar de sala
+                
+                UI.fadeTransition(false, () => {
+                    Flow.playCurrentDialogue();
+                    AppState.flags.isNavigating = false;
+                });
+            });
+        }
+
+        function _updateRoom() {
+            Engine.setCameraZ(-(AppState.currentRoom * GameData.ROOM_Z_SPACING) + 5);
+            AudioSys.changeAmbient(AppState.currentRoom);
+            
+            if (!AppState.visitedRooms.has(AppState.currentRoom)) {
+                AppState.visitedRooms.add(AppState.currentRoom);
+                if (AppState.currentRoom > 0 && AppState.currentRoom < 9) {
+                    Progression.addXP(10, 'Setor Desbloqueado');
+                }
+            }
+
+            UI.updateRoomHeader();
+            UI.clearText();
+        }
+
+        return { navigate };
+    })();
+
+    /** * ==========================================================
+     * 📁 MÓDULO VIRTUAL: ModuleLoader (IFrame & External Apps)
+     * ==========================================================
+     */
+    const ModuleLoader = (function() {
+        function open(url, title) {
+            AudioSys.stopAudio(); 
+            const overlay = document.getElementById('game-module-overlay'); 
+            const loader = document.getElementById('module-loader');
+            const frame = document.getElementById('game-frame'); 
+            
+            document.getElementById('game-module-title').innerText = title; 
+            frame.src = ""; frame.classList.remove('opacity-100'); frame.classList.add('opacity-0'); 
+            loader.classList.remove('hidden'); overlay.classList.remove('hidden'); 
+            setTimeout(() => { overlay.classList.remove('opacity-0'); overlay.classList.add('opacity-100'); }, 50);
+            
+            AudioSys.playSFX('success'); UI.updateAIStatus('processing', 'A CONECTAR AO MÓDULO');
+
+            let step = 0; const steps = [ "A estabelecer handshake seguro...", "A carregar ambiente isolado...", "A injetar interface holográfica...", "Módulo operacional." ];
+            const bootInterval = setInterval(() => {
+                if (step < steps.length) { document.getElementById('loader-details').innerText = steps[step]; step++; } 
+                else {
+                    clearInterval(bootInterval); frame.src = url;
+                    setTimeout(() => { loader.classList.add('hidden'); frame.classList.remove('opacity-0'); frame.classList.add('opacity-100'); UI.updateAIStatus('waiting', 'MÓDULO ATIVO'); }, 1200); 
+                }
+            }, 600);
+        }
+
+        function close(autoSuccess = false) {
+            const overlay = document.getElementById('game-module-overlay');
+            overlay.classList.remove('opacity-100'); overlay.classList.add('opacity-0');
+            
+            const roomData = GameData.scriptData[AppState.currentRoom];
+            const isCompleting = autoSuccess || (roomData && roomData.requiresModule && roomData.moduleId && !AppState.modules[roomData.moduleId].completed);
+
+            if (isCompleting) { AudioSys.playSFX('unlock'); UI.updateAIStatus('processing', 'A PROCESSAR RECOMPENSA...'); } 
+            else { AudioSys.playSFX('error'); UI.updateAIStatus('waiting', 'SISTEMA BASE RESTAURADO'); }
+
+            setTimeout(() => { 
+                overlay.classList.add('hidden'); document.getElementById('game-frame').src = ""; 
+                if (isCompleting) {
+                    if (roomData && roomData.moduleId) AppState.modules[roomData.moduleId].completed = true; 
+                    
+                    UI.updateRoomHeader();
+                    Storage.saveState(); // <-- Grava progresso da simulação
+                    
+                    if (!autoSuccess) {
+                        Progression.addXP(50, `Módulo '${roomData.title}' Concluído`);
+                        if (AppState.currentRoom === 6) Progression.grantBadge('teorico');
+                        if (AppState.currentRoom === 7) Progression.grantBadge('piloto');
+                        if (AppState.currentRoom === 8) Progression.grantBadge('arquiteto');
+                    }
+
+                    Flow.interruptAndSpeak(roomData.rewardDialogue);
+                }
+            }, 500);
+        }
+
+        return { open, close };
+    })();
+
+    /** * ==========================================================
+     * 📁 MÓDULO VIRTUAL: Messaging (Cross-Window Communication)
+     * ==========================================================
+     */
+    const Messaging = (function() {
+        function init() {
+            window.addEventListener("message", (event) => {
+                const data = event.data;
+                if (!data || !data.type) return;
+
+                if (data.type === "QUIZ_COMPLETED") {
+                    AppState.modules.quiz.completed = true;
+                    AppState.modules.quiz.score = data.score;
+                    Progression.addXP(50, 'Avaliação de Conhecimentos');
+                    Progression.grantBadge('teorico');
+                    ModuleLoader.close(true);
+                }
+                else if (data.type === "DRONE_COMPLETED") {
+                    AppState.modules.drone.completed = true;
+                    Progression.addXP(50, 'Simulação de Voo');
+                    Progression.grantBadge('piloto');
+                    ModuleLoader.close(true);
+                }
+                else if (data.type === "LAB3D_COMPLETED") {
+                    AppState.modules.lab3d.completed = true;
+                    Progression.addXP(50, 'Síntese Nano 3D');
+                    Progression.grantBadge('arquiteto');
+                    ModuleLoader.close(true);
+                }
+            });
+        }
+
+        return { init };
+    })();
+
+    /** * ==========================================================
+     * 📁 MÓDULO VIRTUAL: App (Initialization & Globals)
+     * ==========================================================
+     */
+    const App = (function() {
+        function start() {
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('ui-layer').classList.remove('hidden');
+            
+            // 1. Iniciar sistemas base
+            AudioSys.startAmbient();
+            Engine.init();
+            
+            // 2. Carregar progresso guardado (se existir)
+            Storage.loadState();
+            
+            // 3. Ajustar câmara e ambiente para a sala carregada
+            Engine.setCameraZ(-(AppState.currentRoom * GameData.ROOM_Z_SPACING) + 5);
+            AudioSys.changeAmbient(AppState.currentRoom);
+            
+            // 4. Iniciar loop visual e comunicação externa
+            Engine.animate();
+            Messaging.init();
+            
+            // 5. Atualizar UI
+            UI.updateProgressionInfo();
+            UI.updateRoomHeader();
+            Flow.playCurrentDialogue();
+        }
+        return { start };
+    })();
+
+    // EXPORTS GLOBAIS (Necessário para bindings onclick no HTML)
+    window.startExperience = App.start;
+    window.resetExperience = Storage.clearState; // Novo binding para limpar o jogo no ecrã principal
+    window.navigate = Navigation.navigate; 
+    window.openGameModule = ModuleLoader.open;
+    window.closeGameModule = ModuleLoader.close;
+    window.showCertificate = UI.renderCertificate;
+    window.repeatCurrentDialogue = Flow.repeatDialogue;
+
+</script>
+</body>
+</html>
