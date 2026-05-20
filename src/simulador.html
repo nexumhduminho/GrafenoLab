@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador de Propriedades do Grafeno</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React e Babel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+    <style>
+        body { background-color: #020617; margin: 0; overflow: hidden; }
+        canvas { display: block; }
+        .touch-none { touch-action: none; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // --- ÍCONES ---
+        const ZapIcon = ({ className }) => (
+            <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+            </svg>
+        );
+
+        const ShieldIcon = ({ className }) => (
+            <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            </svg>
+        );
+
+        const WavesIcon = ({ className }) => (
+            <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.6 2 5 2 2.3 0 2.3-2 5-2 1.3 0 1.9.5 2.5 1" />
+                <path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.6 2 5 2 2.3 0 2.3-2 5-2 1.3 0 1.9.5 2.5 1" />
+                <path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.6 2 5 2 2.3 0 2.3-2 5-2 1.3 0 1.9.5 2.5 1" />
+            </svg>
+        );
+
+        const InfoIcon = ({ className }) => (
+            <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="16" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+        );
+
+        // --- DADOS DETALHADOS ---
+        const TABS = [
+            {
+                id: 'conductivity',
+                title: 'Condutividade Elétrica',
+                icon: ZapIcon,
+                actionLabel: 'Aplicar Tensão Elétrica',
+                description: 'No grafeno, três dos quatro eletrões de valência formam fortes ligações sigma. O quarto eletrão ocupa uma orbital pz perpendicular ao plano, criando uma nuvem π deslocalizada. Devido à sua estrutura de bandas em forma de "cones de Dirac", estes eletrões movem-se com mobilidade extrema (fermiões sem massa).',
+                representation: 'A nuvem de eletrões (pontos azuis) move-se de forma aleatória em repouso. Ao aplicar tensão, os eletrões adquirem uma velocidade de deriva direcional, fluindo ordenadamente pelo material.'
+            },
+            {
+                id: 'resistance',
+                title: 'Resistência Mecânica',
+                icon: ShieldIcon,
+                actionLabel: 'Aplicar Força de Tração',
+                description: 'O grafeno é um dos materiais mais resistentes conhecidos, com um módulo de Young de ~1 TPa. Esta força brutal provém da rede cristalina hexagonal, onde os átomos de carbono estão unidos por ligações covalentes sp², que são extremamente curtas e difíceis de romper.',
+                representation: 'A rede hexagonal é submetida a uma carga de tração. As ligações mudam de cor para representar o stress mecânico, demonstrando como a estrutura absorve energia sem colapsar.'
+            },
+            {
+                id: 'flexibility',
+                title: 'Flexibilidade',
+                icon: WavesIcon,
+                actionLabel: 'Ondular Material',
+                description: 'Apesar da rigidez mecânica no plano (in-plane), o grafeno é altamente maleável perpendicularmente (out-of-plane). Devido à sua espessura monoatómica, a folha pode ser dobrada ou ondulada sem provocar ruturas nas suas ligações químicas.',
+                representation: 'A simulação demonstra a propagação de ondas tridimensionais ao longo da folha de grafeno, destacando a sua natureza bidimensional e flexibilidade extrema.'
+            }
+        ];
+
+        function App() {
+            const [activeTab, setActiveTab] = useState(TABS[0].id);
+            const [isActionActive, setIsActionActive] = useState(false);
+            
+            const containerRef = useRef(null);
+            const canvasRef = useRef(null);
+            
+            const modeRef = useRef(activeTab);
+            const actionRef = useRef(isActionActive);
+            const latticeRef = useRef({ nodes: [], edges: [] });
+            const electronsRef = useRef([]);
+
+            useEffect(() => {
+                modeRef.current = activeTab;
+                actionRef.current = isActionActive;
+            }, [activeTab, isActionActive]);
+
+            // Geração da rede hexagonal (Honeycomb)
+            const generateHexLattice = (width, height) => {
+                const R = 24;
+                const w = Math.sqrt(3) * R;
+                const h = 1.5 * R;
+                const map = new Map();
+                const cols = Math.ceil(width / w) + 2;
+                const rows = Math.ceil(height / h) + 2;
+
+                for (let row = -1; row < rows; row++) {
+                    for (let col = -1; col < cols; col++) {
+                        const cx = col * w + (row % 2) * (w / 2);
+                        const cy = row * h;
+                        for (let i = 0; i < 6; i++) {
+                            const angle = (Math.PI / 180) * (60 * i - 30);
+                            const vx = cx + R * Math.cos(angle);
+                            const vy = cy + R * Math.sin(angle);
+                            const key = `${Math.round(vx / 2) * 2},${Math.round(vy / 2) * 2}`;
+                            if (!map.has(key)) {
+                                map.set(key, { x: vx, y: vy, ox: vx, oy: vy, z: 0, id: key });
+                            }
+                        }
+                    }
+                }
+
+                const nodes = Array.from(map.values());
+                const edges = [];
+                let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+                nodes.forEach(n => {
+                    if (n.ox < minX) minX = n.ox; if (n.ox > maxX) maxX = n.ox;
+                    if (n.oy < minY) minY = n.oy; if (n.oy > maxY) maxY = n.oy;
+                });
+                const dx = (width - (maxX - minX)) / 2 - minX;
+                const dy = (height - (maxY - minY)) / 2 - minY;
+                nodes.forEach(n => { n.ox += dx; n.oy += dy; n.x = n.ox; n.y = n.oy; });
+
+                for (let i = 0; i < nodes.length; i++) {
+                    for (let j = i + 1; j < nodes.length; j++) {
+                        const distSq = Math.pow(nodes[i].ox - nodes[j].ox, 2) + Math.pow(nodes[i].oy - nodes[j].oy, 2);
+                        if (distSq > Math.pow(R * 0.5, 2) && distSq < Math.pow(R * 1.5, 2)) {
+                            edges.push({ source: nodes[i], target: nodes[j] });
+                        }
+                    }
+                }
+                return { nodes, edges };
+            };
+
+            useEffect(() => {
+                const handleResize = () => {
+                    const parent = containerRef.current;
+                    const canvas = canvasRef.current;
+                    if (parent && canvas) {
+                        canvas.width = parent.clientWidth;
+                        canvas.height = parent.clientHeight;
+                        latticeRef.current = generateHexLattice(canvas.width, canvas.height);
+                        electronsRef.current = Array.from({ length: 180 }).map(() => ({
+                            x: Math.random() * canvas.width,
+                            y: Math.random() * canvas.height,
+                            speed: Math.random() * 0.5 + 0.2,
+                            angle: Math.random() * Math.PI * 2
+                        }));
+                    }
+                };
+                window.addEventListener('resize', handleResize);
+                handleResize();
+                return () => window.removeEventListener('resize', handleResize);
+            }, []);
+
+            useEffect(() => {
+                const canvas = canvasRef.current;
+                const ctx = canvas.getContext('2d');
+                let animationFrameId;
+                let time = 0;
+                let currentStretch = 0;
+                let currentAmplitude = 0;
+
+                const render = () => {
+                    time++;
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    const activeMode = modeRef.current;
+                    const isActive = actionRef.current;
+                    const { nodes, edges } = latticeRef.current;
+
+                    // Suavização das transições
+                    currentStretch += ((activeMode === 'resistance' && isActive ? 0.12 : 0) - currentStretch) * 0.1;
+                    currentAmplitude += ((activeMode === 'flexibility' && isActive ? 48 : 0) - currentAmplitude) * 0.05;
+
+                    nodes.forEach(n => {
+                        if (activeMode === 'resistance') {
+                            n.x = n.ox + (n.ox - canvas.width / 2) * currentStretch;
+                            n.y = n.oy + (n.oy - canvas.height / 2) * currentStretch;
+                        } else if (activeMode === 'flexibility') {
+                            const wave = Math.sin((n.ox / 60) - (time / 25));
+                            n.y = n.oy + wave * currentAmplitude;
+                            n.z = wave;
+                            n.x = n.ox;
+                        } else {
+                            n.x = n.ox; n.y = n.oy;
+                        }
+                    });
+
+                    // Desenho da Rede
+                    edges.forEach(e => {
+                        ctx.beginPath();
+                        ctx.moveTo(e.source.x, e.source.y);
+                        ctx.lineTo(e.target.x, e.target.y);
+                        if (activeMode === 'resistance') {
+                            const r = 71 + currentStretch * 1800;
+                            ctx.strokeStyle = `rgb(${r}, 85, 105)`;
+                            ctx.lineWidth = 1.5 + currentStretch * 12;
+                        } else if (activeMode === 'flexibility') {
+                            const z = (e.source.z + e.target.z) / 2;
+                            ctx.strokeStyle = `rgba(148, 163, 184, ${0.4 + z * 0.2})`;
+                            ctx.lineWidth = 1.5 + z;
+                        } else {
+                            ctx.strokeStyle = '#334155';
+                            ctx.lineWidth = 1.5;
+                        }
+                        ctx.stroke();
+                    });
+
+                    nodes.forEach(n => {
+                        ctx.beginPath();
+                        ctx.fillStyle = activeMode === 'flexibility' ? `rgba(148, 163, 184, ${0.6 + n.z * 0.4})` : '#475569';
+                        ctx.arc(n.x, n.y, activeMode === 'flexibility' ? 2.5 + n.z : 2.5, 0, Math.PI * 2);
+                        ctx.fill();
+                    });
+
+                    // --- LOGICA DE CONDUTIVIDADE CORRIGIDA ---
+                    if (activeMode === 'conductivity') {
+                        electronsRef.current.forEach(e => {
+                            if (isActive) {
+                                // Fluxo direcional (Corrente) -> Sempre para a direita
+                                e.x += e.speed * 8; 
+                                // Pequena flutuação vertical para não parecer linear demais
+                                e.y += Math.sin(time / 10 + e.x / 20) * 0.5;
+                            } else {
+                                // Movimento browniano/aleatório (Equilíbrio)
+                                e.x += Math.cos(e.angle) * e.speed;
+                                e.y += Math.sin(e.angle) * e.speed;
+                                if (time % 60 === 0) e.angle = Math.random() * Math.PI * 2;
+                            }
+
+                            // Reposição (Looping Infinito)
+                            if (e.x > canvas.width) e.x = 0;
+                            if (e.x < 0) e.x = canvas.width;
+                            if (e.y > canvas.height) e.y = 0;
+                            if (e.y < 0) e.y = canvas.height;
+
+                            ctx.shadowBlur = isActive ? 10 : 0;
+                            ctx.shadowColor = '#22d3ee';
+                            ctx.fillStyle = isActive ? '#22d3ee' : '#7dd3fc';
+                            ctx.beginPath();
+                            ctx.arc(e.x, e.y, isActive ? 3 : 2, 0, Math.PI * 2);
+                            ctx.fill();
+                        });
+                        ctx.shadowBlur = 0;
+                    }
+
+                    animationFrameId = requestAnimationFrame(render);
+                };
+                render();
+                return () => cancelAnimationFrame(animationFrameId);
+            }, []);
+
+            const currentTab = TABS.find(t => t.id === activeTab);
+            const CurrentTabIcon = currentTab.icon;
+
+            return (
+                <div className="flex flex-col md:flex-row h-screen w-full bg-slate-950 text-slate-100 font-sans overflow-hidden">
+                    {/* Painel Lateral */}
+                    <div className="w-full md:w-[400px] flex flex-col border-r border-slate-800 bg-slate-900 z-10 shadow-2xl overflow-y-auto">
+                        <div className="p-6 border-b border-slate-800">
+                            <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-emerald-400">Grafeno Interativo</h1>
+                            <p className="text-xs text-slate-500 mt-1 uppercase tracking-widest">Simulador de Nanotecnologia</p>
+                        </div>
+                        
+                        <div className="p-4 space-y-3">
+                            {TABS.map(tab => {
+                                const Icon = tab.icon;
+                                const active = activeTab === tab.id;
+                                return (
+                                    <button key={tab.id} onClick={() => setActiveTab(tab.id)} 
+                                        className={`w-full flex items-center p-4 rounded-xl transition-all border ${active ? 'bg-slate-800 border-slate-600 shadow-lg' : 'border-transparent hover:bg-slate-800/40'}`}>
+                                        <div className={`p-2 rounded-lg ${active ? 'bg-cyan-500/20 text-cyan-400' : 'bg-slate-800 text-slate-500'}`}>
+                                            <Icon className="w-5 h-5" />
+                                        </div>
+                                        <span className={`ml-4 font-semibold tracking-wide ${active ? 'text-white' : 'text-slate-400'}`}>{tab.title}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        <div className="p-6 border-t border-slate-800 bg-slate-950/30 flex-1">
+                            <div className="flex items-center gap-2 mb-3 text-slate-400">
+                                <InfoIcon className="w-4 h-4" />
+                                <h4 className="text-xs font-bold uppercase tracking-tighter">Propriedade Física</h4>
+                            </div>
+                            <p className="text-sm text-slate-300 leading-relaxed text-justify mb-6">{currentTab.description}</p>
+                            
+                            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-tighter mb-3">Na Visualização</h4>
+                            <div className="p-4 rounded-xl bg-slate-800/40 border border-slate-700/50">
+                                <p className="text-sm text-slate-400 italic leading-snug">{currentTab.representation}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Área do Canvas */}
+                    <div className="flex-1 relative bg-[radial-gradient(circle_at_center,_#0f172a_0%,_#020617_100%)]" ref={containerRef}>
+                        <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
+                        
+                        <div className="absolute bottom-12 left-0 right-0 flex flex-col items-center gap-4 pointer-events-none">
+                            <button 
+                                onMouseDown={() => setIsActionActive(true)} onMouseUp={() => setIsActionActive(false)}
+                                onTouchStart={() => setIsActionActive(true)} onTouchEnd={() => setIsActionActive(false)}
+                                className={`pointer-events-auto px-12 py-5 rounded-full font-black text-sm uppercase tracking-[0.2em] transition-all border-2 flex items-center gap-4 select-none touch-none shadow-2xl ${isActionActive ? 'bg-cyan-600 border-cyan-300 scale-95 shadow-cyan-500/40' : 'bg-slate-900 border-slate-700 text-slate-300 hover:border-slate-500'}`}>
+                                <CurrentTabIcon className="w-5 h-5" />
+                                {currentTab.actionLabel}
+                            </button>
+                            <span className={`text-[10px] uppercase tracking-[0.3em] text-slate-600 transition-opacity duration-500 ${isActionActive ? 'opacity-0' : 'opacity-100'}`}>
+                                Pressione para interagir
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
