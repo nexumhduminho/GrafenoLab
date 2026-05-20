@@ -341,7 +341,7 @@ O grafeno é, precisamente, uma dessas camadas individuais da grafite. Enquanto 
           subtitle="Resistência, condutividade e flexibilidade num único material."
         >
           <iframe 
-            src="./simulador.html" 
+            src="simulador.html" 
             width="100%" 
             height="800px" 
             style={{ 
