@@ -360,9 +360,19 @@ O grafeno é, precisamente, uma dessas camadas individuais da grafite. Enquanto 
           subtitle="Da eletrónica à energia, o grafeno abre novas possibilidades."
         >
           <p>
-            As aplicações incluem eletrónica avançada, sensores, energia e
-            materiais compósitos.
+            O grafeno é como uma "super-rodovia" para a eletricidade, permitindo que os elétrons viajem muito mais rápido do que no silício usado nos computadores atuais.
+            Isso significa celulares e laptops que não esquentam e que processam informações em velocidades incríveis.
+            Além disso, como ele deixa passar quase 98% da luz, é o material perfeito para criar telas de toque totalmente transparentes e dobráveis.
           </p>
+          <p>
+            Como o grafeno é feito apenas de superfície (não há "interior"), qualquer molécula que encoste nele altera sua eletricidade instantaneamente. 
+            Isso o torna um sensor ultrassensível, capaz de detectar uma única molécula de um gás poluente ou identificar sinais de doenças, 
+            como o vírus da malária ou da COVID-19, em apenas alguns minutos através de exames simples.
+          </p>
+          <p>
+            Um dos maiores problemas hoje é o tempo que levamos para carregar nossos dispositivos. O grafeno ajuda a criar baterias e supercapacitores que
+            armazenam mais energia e recarregam muito mais rápido que as baterias comuns. Ele também ajuda as baterias a durarem mais anos, evitando que se desgastem com o uso constante.
+          </p>    
         </Section>
 
         <Section
