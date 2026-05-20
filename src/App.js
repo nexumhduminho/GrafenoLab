@@ -344,7 +344,12 @@ O grafeno é, precisamente, uma dessas camadas individuais da grafite. Enquanto 
             src="./simulador.html" 
             width="100%" 
             height="800px" 
-            style="border: none; border-radius: 12px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);" 
+            style={{ 
+              border: 'none', 
+              borderRadius: '12px', 
+              overflow: 'hidden', 
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' 
+            }} 
             title="Propriedades do Grafeno">
           </iframe>
         </Section>
