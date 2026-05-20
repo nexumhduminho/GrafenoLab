@@ -343,7 +343,7 @@ O grafeno é, precisamente, uma dessas camadas individuais da grafite. Enquanto 
           <iframe 
             src="simulador.html" 
             width="100%" 
-            height="800px" 
+            height="620px" 
             style={{ 
               border: 'none', 
               borderRadius: '12px', 
