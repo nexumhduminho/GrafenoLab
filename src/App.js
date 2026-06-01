@@ -264,7 +264,7 @@ O grafeno é, precisamente, uma dessas camadas individuais da grafite. Enquanto 
   </audio>
 />
 
-  <MediaCard
+<MediaCard
   variant="infografico"
   icon={<BarChart3 size={20} strokeWidth={1.8} />}
   eyebrow="Síntese visual"
