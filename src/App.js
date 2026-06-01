@@ -259,9 +259,11 @@ O grafeno é, precisamente, uma dessas camadas individuais da grafite. Enquanto 
   eyebrow="Ouvir resumo"
   title="Podcast"
   description="Uma conversa informal para explorar o que é o grafeno, a sua descoberta e o seu potencial."
-  <audio controls>
-    <source src="public/grafeno-oquee.mp3" type="audio/mpeg">
+  audio={
+    <audio controls>
+      <source src="public/grafeno-oquee.mp3" type="audio/mpeg">
   </audio>
+}
 />
 
 <MediaCard
