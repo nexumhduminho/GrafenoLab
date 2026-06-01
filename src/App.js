@@ -261,7 +261,7 @@ O grafeno é, precisamente, uma dessas camadas individuais da grafite. Enquanto 
   description="Uma conversa informal para explorar o que é o grafeno, a sua descoberta e o seu potencial."
   audio={
     <audio controls>
-      <source src="public/grafeno-oquee.mp3" type="audio/mpeg">
+      <source src="public/grafeno-oquee.mp3" type="audio/mpeg"/>
   </audio>
 }
 />
