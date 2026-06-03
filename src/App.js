@@ -254,16 +254,12 @@ O grafeno é, precisamente, uma dessas camadas individuais da grafite. Enquanto 
 <div ref={mediaRef} className="multimedia-grid">
 
 <MediaCard
-  variant=""
+  variant="audio"
   icon={<Headphones size={20} strokeWidth={1.8} />}
   eyebrow="Ouvir resumo"
   title="Podcast"
   description="Uma conversa informal para explorar o que é o grafeno, a sua descoberta e o seu potencial."
-  audio={
-    <audio controls>
-      <source src="public/grafeno-oquee.mp3" type="audio/mpeg"/>
-  </audio>
-}
+  audioSrc={`${process.env.PUBLIC_URL}/grafeno-oquee.mp3`}
 />
 
 <MediaCard
