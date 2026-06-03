@@ -301,14 +301,14 @@ O grafeno é, precisamente, uma dessas camadas individuais da grafite. Enquanto 
     <div className="infografico-card">
     
       <img
-        src="/infografico_grafeno1.jpg"
+        src={`${process.env.PUBLIC_URL}/infografico_grafeno1.jpg`}
         alt="Infográfico de síntese sobre o capítulo O que é o grafeno?"
         className="infografico-image"
       />
 
       <div className="infografico-actions">
         <a
-          href="/infografico_grafeno1.pdf"
+          href={`${process.env.PUBLIC_URL}/infografico_grafeno1.pdf`}
           download
           className="card-button"
         >
